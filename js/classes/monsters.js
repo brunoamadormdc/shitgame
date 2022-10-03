@@ -1,15 +1,15 @@
 export class Monsters {
     constructor(doc) {
         this.doc = doc
-        this._width = 30
-        this._height = 30
+        this._width = 60
+        this._height = 60
 
     }
 
     newMonster() {
         this.increaseSize()
-        this._positionY = (Math.floor(Math.random() * window.innerHeight) + 1) - 40
-        this._positionX = (Math.floor(Math.random() * window.innerWidth) + 1) - 40
+        this._positionY = (Math.floor(Math.random() * window.innerHeight) + 1) - 150
+        this._positionX = (Math.floor(Math.random() * window.innerWidth) + 1) - 150
         this._newMonster = this.doc._document.createElement('div')
         this._selector = this.doc._document.querySelector('.container')
         this._newMonster.classList.add('__monsters')
@@ -27,11 +27,18 @@ export class Monsters {
 
     }
     resetSize() {
-        this._width = 30
-        this._height = 30
+        this._width = 50
+        this._height = 50
     }
     increaseSize() {
-        this._width += 15
-        this._height += 15
+        this._width = getRandomInteger(60, 200)
+        this._height = getRandomInteger(60, 200)
     }
+
 }
+
+function getRandomInteger(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min)) + min;
+  }
