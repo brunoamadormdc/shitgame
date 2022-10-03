@@ -22,11 +22,11 @@ export class Document {
             player1.moveObject()
 
             this.verifyColision(e.target.attributes[0].value,player1,handler)
-            
+            this.verifyMouseout(e.clientX,e.clientY,player1)
             
             if(player1.positionX >= this._finishLine[0] && player1.positionY >= this._finishLine[1]) {
                 for (let i = 0; i <= this._played; i++) {
-                    this._monster.newMonster()
+                    this._monster.newMonster(player1)
                 }
                 player1.increasePoints()
                 player1.resetBodyPlayer()
@@ -40,6 +40,11 @@ export class Document {
     calculateFinishLine() {
        this._finishLine = [this._document.body.clientWidth - 80,this._document.body.clientHeight - 30]
        
+    }
+
+    verifyMouseout(positionX,positionY,player) {
+        
+ 
     }
 
     verifyColision(obj,player,handler) {

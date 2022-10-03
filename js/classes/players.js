@@ -56,8 +56,8 @@ export class Player {
     }
 
     moveObject() {
-        this._bodyPlayer.style.top = `${this.positionY}px`
-        this._bodyPlayer.style.left = `${this.positionX}px`
+        this._bodyPlayer.style.top = `${this.positionY - 10}px`
+        this._bodyPlayer.style.left = `${this.positionX - 12}px`
         //this._document.points_of_colision(this.positionX,this.positionY)
     }
 

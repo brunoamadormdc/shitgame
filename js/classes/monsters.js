@@ -12,7 +12,7 @@ export class Monsters {
         this._positionX = (Math.floor(Math.random() * window.innerWidth) + 1) - 150
         this._newMonster = this.doc._document.createElement('div')
         this._selector = this.doc._document.querySelector('.container')
-        this._newMonster.classList.add('__monsters')
+        this._newMonster.classList.add(`__monsters`)
         this._newMonster.style.width = `${this._width}px`
         this._newMonster.style.height = `${this._height}px`
         this._newMonster.style.top = `${this._positionY}px`
@@ -26,6 +26,7 @@ export class Monsters {
         this.doc._document.querySelectorAll('.__monsters').forEach(n => n.remove());
 
     }
+
     resetSize() {
         this._width = 50
         this._height = 50
@@ -42,3 +43,5 @@ function getRandomInteger(min, max) {
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min)) + min;
   }
+
+
