@@ -31,8 +31,8 @@ export class Monsters {
         this._height = 50
     }
     increaseSize() {
-        this._width = getRandomInteger(60, 200)
-        this._height = getRandomInteger(60, 200)
+        this._width = getRandomInteger(1, 200)
+        this._height = getRandomInteger(1, 200)
     }
 
 }
