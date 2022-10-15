@@ -15,6 +15,11 @@ export class Document {
         
 
     }
+    powerListener(player1) {
+        let handler = (e) => {
+
+        }
+    }
 
     createListener(player1) {
         
@@ -49,10 +54,15 @@ export class Document {
        let width = window.innerWidth - 3
        if(player.positionX <= 3 || player.positionY <= 3 || player.positionX >= width || player.positionY >= height) {
             player.resetBodyPlayer()
+            player.decreaseLifes()
             this._app.removeEventListener('mousemove',handler)
-            player.resetPoints()
-            this._monster.removeAllMonsters()
-            this._played = 1
+            if(player._lifes.lifes < 1) {
+                
+                player.resetPoints()
+                this._monster.removeAllMonsters()
+                this._played = 1
+                
+            }
        }
     }
 
@@ -60,10 +70,16 @@ export class Document {
         
         if(obj == '__monsters') {
             player.resetBodyPlayer()
+            player.decreaseLifes()
             this._app.removeEventListener('mousemove',handler)
-            player.resetPoints()
-            this._monster.removeAllMonsters()
-            this._played = 1
+            if(player._lifes.lifes < 1) {
+                
+                player.resetPoints()
+                this._monster.removeAllMonsters()
+                this._played = 1
+                
+            }
+           
         }
     }
 

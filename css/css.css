@@ -24,6 +24,24 @@ body .__points {
   font-weight: bold;
   z-index: 2000;
 }
+body .__lifes {
+  position: absolute;
+  width: 100px;
+  height: 40px;
+  right: 45px;
+  top: 0px;
+  background-repeat: no-repeat;
+  background-position: center center;
+}
+body .__lifes.three {
+  background-image: url('../images/three_heart.png');
+}
+body .__lifes.two {
+  background-image: url('../images/two_heart.png');
+}
+body .__lifes.one {
+  background-image: url('../images/one_heart.png');
+}
 body .container {
   width: 99.7%;
   height: 99.4vh;
