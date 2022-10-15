@@ -12,15 +12,17 @@ export class Document {
         this._body.append(this._app)
         this.createFinishLine()
         this.calculateFinishLine()
+        
 
     }
 
     createListener(player1) {
+        
         var handler = (e) =>{
             player1.positionX = e.clientX
             player1.positionY = e.clientY
             player1.moveObject()
-
+            this.verifyMouseout(player1,handler)
             this.verifyColision(e.target.attributes[0].value,player1,handler)
             this.verifyMouseout(e.clientX,e.clientY,player1)
             
@@ -42,9 +44,16 @@ export class Document {
        
     }
 
-    verifyMouseout(positionX,positionY,player) {
-        
- 
+    verifyMouseout(player,handler) {
+       let height = window.innerHeight - 3
+       let width = window.innerWidth - 3
+       if(player.positionX <= 3 || player.positionY <= 3 || player.positionX >= width || player.positionY >= height) {
+            player.resetBodyPlayer()
+            this._app.removeEventListener('mousemove',handler)
+            player.resetPoints()
+            this._monster.removeAllMonsters()
+            this._played = 1
+       }
     }
 
     verifyColision(obj,player,handler) {
