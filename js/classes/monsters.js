@@ -39,6 +39,17 @@ export class Monsters {
         
     }
 
+    increaseSizes() {
+        this.doc._document.querySelectorAll('.__monsters').forEach(n => {
+           let numberX = n.style.width.replace('px','')
+           numberX = parseInt(numberX)
+           n.style.width = `${numberX + 10}px`
+           let numberY = n.style.height.replace('px','')
+           numberY = parseInt(numberY)
+           n.style.height = `${numberY + 10}px`
+        });
+    }
+
     increaseSize() {
         if(this._width >= 120) {
             this.resetSize()

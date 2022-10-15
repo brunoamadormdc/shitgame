@@ -71,6 +71,7 @@ export class Document {
         if(obj == '__monsters') {
             player.resetBodyPlayer()
             player.decreaseLifes()
+            this._monster.increaseSizes()
             this._app.removeEventListener('mousemove',handler)
             if(player._lifes.lifes < 1) {
                 

@@ -8,6 +8,7 @@ export class Player {
         this._bodyPlayer = document.createElement('div')
         this._pointsPlayer = document.createElement('div')
         this._lifesPlayer = document.createElement('div')
+        this._powersPlayer = document.createElement('div')
         this._viewpoints = new Proxies(
             {
                 points:0
@@ -15,7 +16,7 @@ export class Player {
         this)
         this._powers = new Proxies(
             {
-                powers:3
+                powers:0
             },
         this)
         this._lifes = new Proxies(
@@ -77,6 +78,7 @@ export class Player {
         this._document.create_new_element('_body',this._pointsPlayer)
         this._document.create_new_element('_body',this._lifesPlayer)
         this._lifes.lifes = 3
+        this._powers.powers = 3
 
         this._bodyPlayer.addEventListener('click',handler)
     }
