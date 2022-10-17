@@ -29,8 +29,8 @@ export class Proxies {
                         view._lifesPlayer.classList.add('zero')
                     }
                 }
-                if(prop == 'powers') {
-                    console.log('powers')
+                if(prop == 'hammer') {
+                    view._hammersPlayer.innerHTML = value
                 }
                 
                 return Reflect.set(target, prop, value, receiver);

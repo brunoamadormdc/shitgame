@@ -2,13 +2,23 @@ import { Proxies } from "./proxies.js"
 
 export class Player {
     constructor(mouseX,mouseY,Document) {
+       
         this._positionX = mouseX
         this._positionY = mouseY
+        this._movePower = 10
         this._document = Document
+        this._verifySafezone = true
         this._bodyPlayer = document.createElement('div')
         this._pointsPlayer = document.createElement('div')
         this._lifesPlayer = document.createElement('div')
         this._powersPlayer = document.createElement('div')
+        this._hammersPlayer = document.createElement('div')
+
+        this._hammer = new Proxies(
+            {
+                hammer:10
+            },
+        this)
         this._viewpoints = new Proxies(
             {
                 points:0
@@ -42,6 +52,20 @@ export class Player {
         this._positionY = val
     }
 
+    get movePower() {
+        return this._movePower
+    }
+
+     set movePower(val) {
+        if(val >= 100) {
+            return this._movePower = 100
+        }
+        if(val <= 5) {
+            return this._movePower = 5
+        }
+        this._movePower = val
+    }
+
     increasePoints() {
         this._viewpoints.points += 10
     }
@@ -50,6 +74,7 @@ export class Player {
         this._lifes.lifes = 3
         this._powers.powers = 3
         this._viewpoints.points = 0
+        this._hammer.hammer = 10
     }
 
     decreaseLifes() {
@@ -60,32 +85,37 @@ export class Player {
         this._powers.powers = this._powers.powers - 1
     }
 
-    createObject() {
+    createObject(player) {
         let handler = (e) =>{
-            if(e.clientX >= 0 && e.clientX <=20) {
-                
+            if(e.key == 'Enter') {
                 this._document.createListener(this)
-                
-                
+                window.removeEventListener('keypress',handler)              
             }
         }
         this._bodyPlayer.classList.add('__player')
         this._pointsPlayer.classList.add('__points')
+        this._hammersPlayer.classList.add('__hammer')
         
         this._pointsPlayer.innerHTML = this._viewpoints.points
 
         this._document.create_new_element('_app',this._bodyPlayer)
         this._document.create_new_element('_body',this._pointsPlayer)
         this._document.create_new_element('_body',this._lifesPlayer)
+        this._document.create_new_element('_body',this._hammersPlayer)
+        this._hammersPlayer.innerHTML = this._hammer.hammer
         this._lifes.lifes = 3
         this._powers.powers = 3
 
-        this._bodyPlayer.addEventListener('click',handler)
+        window.addEventListener('keypress',handler)
     }
 
+    
+
     moveObject() {
+        
         this._bodyPlayer.style.top = `${this.positionY - 10}px`
         this._bodyPlayer.style.left = `${this.positionX - 12}px`
+        this._verifySafezone = this._bodyPlayer.offsetLeft <=10 && this._bodyPlayer.offsetTop <= 10
         //this._document.points_of_colision(this.positionX,this.positionY)
     }
 
@@ -94,9 +124,6 @@ export class Player {
         this._bodyPlayer.style.left = `0px`
     }
 
-    verifyCollision() {
-        
-    }
 
 
 }

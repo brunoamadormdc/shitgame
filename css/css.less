@@ -7,7 +7,8 @@ body {
     overflow: hidden;
     background-image:url('../images/background.jpg');
     background-position:center center;
-    cursor:pointer;
+    background-size:contain;
+    
     .__points {
         display:flex;
         align-items: center;
@@ -22,6 +23,18 @@ body {
         text-transform:uppercase;
         font-weight:bold;
         z-index:2000
+    }
+    .__hammer {
+        position:absolute;
+        width:60px;
+        height:40px;
+        right:70px;
+        top:0px;
+        background-repeat: no-repeat;
+        background-position: center center;
+        background-size:contain;
+        background-color:aqua;
+        cursor: url('../images/sword.png'), auto;
     }
     .__lifes {
         position:absolute;
@@ -44,37 +57,54 @@ body {
 
     }
     .container {
-        width:99.7%;
-        height:99.4vh;
-        border:3px solid rgba(255, 59, 59, 0.432);
+        width:100vw;
+        height:100vh;
+        	
+        
         .__player {
             width:30px;
             height:30px;
-
+            background-image:url('../images/ufo.png');
+            background-repeat: no-repeat;
             border-radius:50%;
+            border:1px solid rgba(255, 255, 255, 0);
             position:absolute;
             top:0px;
             left:0px;
-            background-image:url('../images/ufo.png');
+            
             background-position:center;
             background-repeat:no-repeat;
             background-size:30px 30px;
             cursor:pointer;
+           
+            
         }
         .__monsters {
+            border-radius:50%;
+            border:1px solid rgba(212, 184, 184, 0);
            
-            background: rgb(36,0,0);
-            background: radial-gradient(circle, rgba(36,0,0,0.24693627450980393) 0%, rgba(121,9,9,0.4766281512605042) 48%, rgba(255,0,56,0.4514180672268907) 100%);
+            background-repeat:no-repeat;
+            background-size:cover;
             z-index:10;
             position:absolute;
 
             content: '';
             box-sizing: border-box;
             position: absolute;
-            border-radius: 50%;
-            border: 2px solid rgb(165, 0, 0);
-            border-top-color: rgb(0, 0, 0);
-            animation: spinner 2s linear infinite;
+            animation: move 10s ease infinite;
+            
+            
+            
+
+            &.goodMonster {
+                background: rgb(0, 1, 36);
+                background: radial-gradient(circle, rgba(34, 0, 224, 0.247) 0%, rgba(0, 168, 173, 0.477) 48%, rgba(0, 89, 255, 0.733) 100%);
+                border: 2px solid rgb(20, 68, 90);
+                border-top-color: rgb(10, 51, 139);
+        }
+         &.__destruction {
+            background-image:url('../images/destruction.png') !important;
+         }
         }
         .__finishLine {
             position:absolute;
@@ -100,3 +130,4 @@ body {
 @keyframes spinner {
     to {transform: rotate(360deg);}
 }
+
