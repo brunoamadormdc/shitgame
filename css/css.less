@@ -7,7 +7,8 @@ body {
     overflow: hidden;
     background-image:url('../images/background.jpg');
     background-position:center center;
-    background-size:contain;
+    background-size:cover;
+    font-family: 'Silkscreen', cursive !important;
     
     .__points {
         display:flex;
@@ -18,13 +19,33 @@ body {
         top:0px;
         width:40px;
         height:40px;
-        background-color:rgb(255, 255, 255);
-        color:rgb(2, 0, 0);
+        border-bottom:2px dashed #fff;
+        border-left:2px dashed #fff;
+        color:rgb(255, 255, 255);
         text-transform:uppercase;
         font-weight:bold;
-        z-index:2000
+        z-index:2000;
+        font-size:20px;
     }
     .__hammer {
+        display:flex;
+        align-items: center;
+        justify-content: center;
+        position:absolute;
+        width:100px;
+        height:40px;
+        right:120px;
+        top:0px;
+        color:#fff;
+        background-repeat: no-repeat;
+        background-position: left center;
+        background-size:contain;
+        font-size:20px;
+        z-index:2000;
+        background-image:url('../images/sword.png')
+
+    }
+    .__lifes {
         position:absolute;
         width:60px;
         height:40px;
@@ -33,18 +54,7 @@ body {
         background-repeat: no-repeat;
         background-position: center center;
         background-size:contain;
-        background-color:aqua;
-        cursor: url('../images/sword.png'), auto;
-    }
-    .__lifes {
-        position:absolute;
-        width:60px;
-        height:40px;
-        right:45px;
-        top:0px;
-        background-repeat: no-repeat;
-        background-position: center center;
-        background-size:contain;
+        z-index:2000;
         &.three {
             background-image:url('../images/three_heart.png')
         }
@@ -80,7 +90,7 @@ body {
             
         }
         .__monsters {
-            border-radius:50%;
+            
             border:1px solid rgba(212, 184, 184, 0);
            
             background-repeat:no-repeat;
@@ -97,10 +107,9 @@ body {
             
 
             &.goodMonster {
-                background: rgb(0, 1, 36);
-                background: radial-gradient(circle, rgba(34, 0, 224, 0.247) 0%, rgba(0, 168, 173, 0.477) 48%, rgba(0, 89, 255, 0.733) 100%);
-                border: 2px solid rgb(20, 68, 90);
-                border-top-color: rgb(10, 51, 139);
+                border-radius:20%;
+                background-image:url('../images/sword.png') !important;
+                
         }
          &.__destruction {
             background-image:url('../images/destruction.png') !important;
@@ -115,11 +124,13 @@ body {
             height:30px;
             bottom:0px;
             right:0px;
-            background-color:gray;
+            
             color:#fff;
             font-size:12px;
             font-weight:bold;
             text-transform:uppercase;
+            border-top:2px dashed #fff;
+            border-left:2px dashed #fff;
 
             
         }

@@ -18,69 +18,77 @@ export class Monsters {
         this[`_newMonster` + id].style.height = `${this._height}px`
         this[`_newMonster` + id].style.top = `${posY}px`
         this[`_newMonster` + id].style.left = `${posX}px`
-        this[`_newMonster` + id].style.backgroundImage = `url('../../images/planet${getRandomInteger(1,6)}.png`
+        this[`_newMonster` + id].style.backgroundImage = `url('../../images/planet${getRandomInteger(1, 6)}.png`
         this._selector.append(this[`_newMonster` + id])
         let css = window.document.styleSheets[0]
         css.insertRule(`@keyframes move${id} {
             50% {
-                ${positions(posX,posY)}
+                ${positions(posX, posY)}
              }
-        }`,css.cssRules.length)
-        
-        this[`_newMonster` + id].style.animation = `move${id} ${getRandomInteger(5,15).toString()}s ease infinite`
-        this.detectMonstercollision(player1,this[`_newMonster` + id],'vilain')
+        }`, css.cssRules.length)
+
+        this[`_newMonster` + id].style.animation = `move${id} ${getRandomInteger(5, 15).toString()}s ease infinite`
+        this.detectMonstercollision(player1, this[`_newMonster` + id], 'vilain')
 
     }
 
-    detectMonstercollision(player1,monster,type="vilain") {
-        if(type == 'vilain') {
-            let timer = setInterval(() => {
-                if(!player1._verifySafezone) {
-                    let top = parseInt(monster.offsetTop) - 10
-                    let left = parseInt(monster.offsetLeft) - 10
-                    let width = parseInt(monster.offsetWidth) + left
-                    let height = parseInt(monster.offsetHeight) + top
-                    
-                    if ((player1.positionX >= left && player1.positionX <= width) && (player1.positionY >= top && player1.positionY <= height)) {
+    detectMonstercollision(player1, monster, type = "vilain") {
+
+        let timer = setInterval(() => {
+            if (!player1._safed) {
+                let top = parseInt(monster.offsetTop) - 8
+                let left = parseInt(monster.offsetLeft) - 8
+                let width = parseInt(monster.offsetWidth) + left
+                let height = parseInt(monster.offsetHeight) + top
+
+                if ((player1.positionX >= left && player1.positionX <= width) && (player1.positionY >= top && player1.positionY <= height)) {
+                    if (type == 'vilain') {
                         player1.resetBodyPlayer()
                         player1.decreaseLifes()
+                        player1.positionX = 20
+                        player1.positionY = 20
                         if (player1._lifes.lifes < 1) {
                             player1.resetPoints()
                             this.removeAllMonsters()
                             this.doc._played = 1
                             clearInterval(timer)
+                            player1.createObject(player1)
+                            this.doc._modal.type = 'gameover'
+
+                        } else {
+                            this.doc._modal.type = 'collision'
                         }
-                        player1.positionX = 20
-                        player1.positionY = 20 
-                    } 
+
+
+
+                    }
+                    else {
+                        monster.remove()
+                        player1._hammer.hammer += 5
+                    }
+
                 }
-                
-    
-            }, 100)
-        }
-        else {
-            monster.remove()
-            player1._hammer.hammer += 5
-        }
+            }
+
+        }, 50)
 
     }
 
-
     newGoodmonster(player1) {
+
         const { posX, posY } = this.calculatePositions()
         let id = (Math.random() * 100).toString().replace('.', '')
         this[`_newMonster` + id] = this.doc._document.createElement('div')
         this._selector = this.doc._document.querySelector('.container')
         this[`_newMonster` + id].classList.add(`__monsters`)
         this[`_newMonster` + id].classList.add(`goodMonster`)
-        this[`_newMonster` + id].style.width = `30px`
-        this[`_newMonster` + id].style.height = `30px`
+        this[`_newMonster` + id].style.width = `60px`
+        this[`_newMonster` + id].style.height = `60px`
         this[`_newMonster` + id].style.top = `${posY}px`
         this[`_newMonster` + id].style.left = `${posX}px`
         this._selector.append(this[`_newMonster` + id])
-        this.detectMonstercollision(player1,this[`_newMonster` + id],"goodguy")
+        this.detectMonstercollision(player1, this[`_newMonster` + id], "goodguy")
     }
-
 
     removeSomemonsters() {
         this.doc._document.querySelectorAll('.__monsters').forEach(n => n.remove());
@@ -122,7 +130,6 @@ export class Monsters {
             }
         }
 
-
     }
 
     increaseSizes() {
@@ -152,7 +159,6 @@ export class Monsters {
         this._height = 60
     }
 
-
 }
 
 function getRandomInteger(min, max) {
@@ -161,8 +167,8 @@ function getRandomInteger(min, max) {
     return Math.floor(Math.random() * (max - min)) + min;
 }
 
-function positions(posX,posY) {
-    let array = [`left: ${posX - getRandomInteger(50,300)}px;`,`top: ${posY - getRandomInteger(50,300)}px;`]
+function positions(posX, posY) {
+    let array = [`left: ${posX - getRandomInteger(50, 300)}px;`, `top: ${posY - getRandomInteger(50, 300)}px;`]
     let rand = array[(Math.random() * array.length) | 0]
     console.log(rand)
     return rand.toString()

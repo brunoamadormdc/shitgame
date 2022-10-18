@@ -1,4 +1,5 @@
 import { Monsters } from "./monsters.js"
+import { Proxies } from "./proxies.js"
 
 export class Document {
     constructor(document) {
@@ -10,6 +11,10 @@ export class Document {
         this._addLife = 0
         this._finishLine = []
         this._monster = new Monsters(this)
+        this._modal = new Proxies({
+            openModal:false,
+            type:null
+        },this)
         this._body.append(this._app)
         this.createFinishLine()
         this.calculateFinishLine()
@@ -45,13 +50,13 @@ export class Document {
     createListener(player1) {
             this.monsterDestruct(player1)
             let handler = (e) => {
-                console.log(player1)
+                
                 if (e.code == 'NumpadAdd') {
-                    player1.movePower += 5
+                    player1.movePower += 10
 
                 }
                 if (e.code == 'NumpadSubtract') {
-                    player1.movePower -= 5
+                    player1.movePower -= 10
 
                 }
                 if (e.code == 'ArrowRight') {
@@ -95,7 +100,7 @@ export class Document {
 
     }
 
-    verifyMonster(player1, type, handler) {
+/*     verifyMonster(player1, type, handler) {
         let monsters = document.querySelectorAll('.__monsters')
         let touched = []
         if (monsters.length > 0) {
@@ -134,14 +139,14 @@ export class Document {
             }
  
         }
-    }
+    } */
 
     verifyFinishline(player1, type, handler) {
         if (player1.positionX >= this._finishLine[0] && player1.positionY >= this._finishLine[1]) {
             for (let i = 0; i <= this._played; i++) {
                 this._monster.newMonster(player1)
             }
-            if(this._addLife == 5) {
+            if(this._addLife == 3) {
                 this._monster.newGoodmonster(player1)
                 this._addLife = 0
             }

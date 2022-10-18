@@ -7,7 +7,7 @@ export class Player {
         this._positionY = mouseY
         this._movePower = 10
         this._document = Document
-        this._verifySafezone = true
+        this._safed = true
         this._bodyPlayer = document.createElement('div')
         this._pointsPlayer = document.createElement('div')
         this._lifesPlayer = document.createElement('div')
@@ -60,8 +60,8 @@ export class Player {
         if(val >= 100) {
             return this._movePower = 100
         }
-        if(val <= 5) {
-            return this._movePower = 5
+        if(val <= 10) {
+            return this._movePower = 10
         }
         this._movePower = val
     }
@@ -115,7 +115,7 @@ export class Player {
         
         this._bodyPlayer.style.top = `${this.positionY - 10}px`
         this._bodyPlayer.style.left = `${this.positionX - 12}px`
-        this._verifySafezone = this._bodyPlayer.offsetLeft <=10 && this._bodyPlayer.offsetTop <= 10
+        this._safed = false
         //this._document.points_of_colision(this.positionX,this.positionY)
     }
 
