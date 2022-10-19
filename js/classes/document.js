@@ -1,5 +1,6 @@
 import { Monsters } from "./monsters.js"
 import { Proxies } from "./proxies.js"
+import { Modalmessages } from "./modal.js"
 
 export class Document {
     constructor(document) {
@@ -7,36 +8,45 @@ export class Document {
         this._body = this._document.querySelector('body')
         this._app = this._document.createElement('div')
         this._app.classList.add('container')
+        this._safeZone = this._document.createElement('div')
         this._played = 0
         this._addLife = 0
         this._finishLine = []
-        this._monster = new Monsters(this)
         this._modal = new Proxies({
             openModal:false,
             type:null
         },this)
         this._body.append(this._app)
+        this._player = null
+        this._modalMessages = new Modalmessages(this)
+        this._monster = new Monsters(this)
         this.createFinishLine()
         this.calculateFinishLine()
+        this._safeZone.classList.add('__safeZone')
+        this.create_new_element('_app',this._safeZone)
 
 
     }
 
-    monsterDestruct(player1) {
+    playerDefine(player) {
+        this._player = player
+    }
+
+    monsterDestruct() {
         let handler = (e) => {
             let element = e.srcElement
             
-            if(element.className == '__monsters' && player1._hammer.hammer > 0) {
+            if(element.className == '__monsters' && this._player._hammer.hammer > 0) {
                 element.classList.add('__destruction')
-                console.log(element)
+                
                 setTimeout(()=>{
                     
                     element.remove()
-                    if(player1._hammer.hammer <= 0) {
-                        player1._hammer.hammer = 0
+                    if(this._player._hammer.hammer <= 0) {
+                        this._player._hammer.hammer = 0
                     }
                     else {
-                        player1._hammer.hammer -= 1
+                        this._player._hammer.hammer -= 1
                     }
                 },200)
 
@@ -47,41 +57,45 @@ export class Document {
         this._app.addEventListener('click',handler)
     }
 
-    createListener(player1) {
-            this.monsterDestruct(player1)
+    
+
+    createListener() {
+            
+            this.monsterDestruct()
+            
             let handler = (e) => {
                 
                 if (e.code == 'NumpadAdd') {
-                    player1.movePower += 10
+                    this._player.movePower += 10
 
                 }
                 if (e.code == 'NumpadSubtract') {
-                    player1.movePower -= 10
+                    this._player.movePower -= 10
 
                 }
                 if (e.code == 'ArrowRight') {
                     
-                    if (player1.positionX < 5) player1.positionX = player1.movePower
-                    player1.positionX = player1.positionX + player1.movePower
+                    if (this._player.positionX < 5) this._player.positionX = this._player.movePower
+                    this._player.positionX = this._player.positionX + this._player.movePower
                 }
                 if (e.code == 'ArrowLeft') {
-                    if (player1.positionX < 5) player1.positionX = player1.movePower
-                    else player1.positionX = player1.positionX - player1.movePower
+                    if (this._player.positionX < 5) this._player.positionX = this._player.movePower
+                    else this._player.positionX = this._player.positionX - this._player.movePower
 
                 }
                 if (e.code == 'ArrowUp') {
-                    if (player1.positionY < 5) player1.positionY = player1.movePower
-                    else player1.positionY = player1.positionY - player1.movePower
+                    if (this._player.positionY < 5) this._player.positionY = this._player.movePower
+                    else this._player.positionY = this._player.positionY - this._player.movePower
 
                 }
                 if (e.code == 'ArrowDown') {
 
-                    if (player1.positionY < 5) player1.positionY = player1.movePower
-                    else player1.positionY = player1.positionY + player1.movePower
+                    if (this._player.positionY < 5) this._player.positionY = this._player.movePower
+                    else this._player.positionY = this._player.positionY + this._player.movePower
 
                 }
                
-                this.moves(e, player1, handler, 'keydown')
+                this.moves(e, handler, 'keydown')
 
             };
             document.addEventListener('keydown', handler)
@@ -91,11 +105,11 @@ export class Document {
 
 
 
-    moves(e, player1, handler, type = 'mousemove') {
+    moves(e,  handler, type = 'mousemove') {
 
-        player1.moveObject()
+        this._player.moveObject()
         //this.verifyMonster(player1, type, handler)
-        this.verifyFinishline(player1, type, handler)
+        this.verifyFinishline(type, handler)
 
 
     }
@@ -141,17 +155,17 @@ export class Document {
         }
     } */
 
-    verifyFinishline(player1, type, handler) {
-        if (player1.positionX >= this._finishLine[0] && player1.positionY >= this._finishLine[1]) {
+    verifyFinishline(type, handler) {
+        if (this._player.positionX >= this._finishLine[0] - 15 && this._player.positionY >= this._finishLine[1] - 15) {
             for (let i = 0; i <= this._played; i++) {
-                this._monster.newMonster(player1)
+                this._monster.newMonster(this._player)
             }
             if(this._addLife == 3) {
-                this._monster.newGoodmonster(player1)
+                this._monster.newGoodmonster(this._player)
                 this._addLife = 0
             }
-            player1.increasePoints()
-            player1.resetBodyPlayer()
+            this._player.increasePoints()
+            this._player.resetBodyPlayer()
             if(this._played >= 10) {
                 this._played = 1
             }
@@ -160,8 +174,8 @@ export class Document {
             }
             this._addLife += 1
             this._app.removeEventListener(type, handler)
-            player1.positionX = 20
-            player1.positionY = 20
+            this._player.finishArrive()
+            
         }
     }
 
@@ -177,7 +191,7 @@ x
     createFinishLine() {
         let finish = this._document.createElement('div')
         finish.classList.add('__finishLine')
-        finish.innerHTML = 'Chegada'
+        finish.innerHTML = 'Finish'
         this._app.append(finish)
 
     }

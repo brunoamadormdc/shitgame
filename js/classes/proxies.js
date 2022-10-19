@@ -6,7 +6,7 @@ export class Proxies {
                 return target[prop]
             },
             set(target, prop, value, receiver) {
-                console.log(value)
+                
                 if(prop == 'points') {
                     view._pointsPlayer.innerHTML = value
                 }
@@ -31,6 +31,27 @@ export class Proxies {
                 }
                 if(prop == 'hammer') {
                     view._hammersPlayer.innerHTML = value
+                }
+
+                if(prop == 'safed') {
+                    if (value) {
+                        view._bodyPlayer.className = '__player __safe'
+                    }
+                    else {
+                        view._bodyPlayer.className = '__player __notSafe'
+                    }
+                    
+                }
+                if(prop == 'points') {
+                    
+                    if(value <= 0) {
+                        
+                        console.log('perdeu')
+                    }
+                    else {
+                        
+                        console.log('fez Uma')
+                    }
                 }
                 
                 return Reflect.set(target, prop, value, receiver);

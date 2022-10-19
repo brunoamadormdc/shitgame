@@ -70,7 +70,15 @@ body {
         width:100vw;
         height:100vh;
         	
-        
+        .__safeZone {
+            position:absolute;
+            width:40px;
+            height:40px;
+            background-color:rgba(139, 139, 139, 0.151);
+            top:0px;
+            bottom:0px;
+
+        }
         .__player {
             width:30px;
             height:30px;
@@ -86,6 +94,15 @@ body {
             background-repeat:no-repeat;
             background-size:30px 30px;
             cursor:pointer;
+            opacity:0.5;
+            transition:opacity 500ms;
+
+            &.__safe {
+                opacity:0.5;
+            }
+            &.__notSafe {
+                opacity:1;
+            }
            
             
         }

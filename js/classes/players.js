@@ -1,40 +1,41 @@
 import { Proxies } from "./proxies.js"
 
 export class Player {
-    constructor(mouseX,mouseY,Document) {
-       
+    constructor(mouseX, mouseY, Document) {
+
         this._positionX = mouseX
         this._positionY = mouseY
-        this._movePower = 10
+        this._movePower = 5
         this._document = Document
-        this._safed = true
         this._bodyPlayer = document.createElement('div')
         this._pointsPlayer = document.createElement('div')
         this._lifesPlayer = document.createElement('div')
         this._powersPlayer = document.createElement('div')
         this._hammersPlayer = document.createElement('div')
-
+        this._safed = new Proxies({
+            safed: true
+        }, this)
         this._hammer = new Proxies(
             {
-                hammer:10
+                hammer: 10
             },
-        this)
+            this)
         this._viewpoints = new Proxies(
             {
-                points:0
+                points: 0
             },
-        this)
+            this)
         this._powers = new Proxies(
             {
-                powers:0
+                powers: 0
             },
-        this)
+            this)
         this._lifes = new Proxies(
             {
-                lifes:0
+                lifes: 0
             },
-        this)
-        
+            this)
+
     }
 
     get positionX() {
@@ -44,7 +45,7 @@ export class Player {
     get positionY() {
         return this._positionY
     }
-        
+
     set positionX(val) {
         this._positionX = val
     }
@@ -56,18 +57,18 @@ export class Player {
         return this._movePower
     }
 
-     set movePower(val) {
-        if(val >= 100) {
-            return this._movePower = 100
+    set movePower(val) {
+        if (val >= 30) {
+            return this._movePower = 30
         }
-        if(val <= 10) {
-            return this._movePower = 10
+        if (val <= 5) {
+            return this._movePower = 5
         }
         this._movePower = val
     }
 
     increasePoints() {
-        this._viewpoints.points += 10
+        this._viewpoints.points += 1
     }
 
     resetPoints() {
@@ -75,6 +76,16 @@ export class Player {
         this._powers.powers = 3
         this._viewpoints.points = 0
         this._hammer.hammer = 10
+        this._safed.safed = true
+        this.movePower = 5
+    }
+
+    finishArrive() {
+        this._safed.safed = true
+        this.positionY = 0
+        this.positionX = 0
+        this._bodyPlayer.style.top = `${this.positionY}px`
+        this._bodyPlayer.style.left = `${this.positionX}px`
     }
 
     decreaseLifes() {
@@ -86,36 +97,47 @@ export class Player {
     }
 
     createObject(player) {
-        let handler = (e) =>{
-            if(e.key == 'Enter') {
+        let handler = (e) => {
+            if (e.key == 'Enter') {
                 this._document.createListener(this)
-                window.removeEventListener('keypress',handler)              
+                window.removeEventListener('keypress', handler)
             }
         }
         this._bodyPlayer.classList.add('__player')
         this._pointsPlayer.classList.add('__points')
         this._hammersPlayer.classList.add('__hammer')
-        
+
         this._pointsPlayer.innerHTML = this._viewpoints.points
 
-        this._document.create_new_element('_app',this._bodyPlayer)
-        this._document.create_new_element('_body',this._pointsPlayer)
-        this._document.create_new_element('_body',this._lifesPlayer)
-        this._document.create_new_element('_body',this._hammersPlayer)
+        this._document.create_new_element('_app', this._bodyPlayer)
+        this._document.create_new_element('_body', this._pointsPlayer)
+        this._document.create_new_element('_body', this._lifesPlayer)
+        this._document.create_new_element('_body', this._hammersPlayer)
         this._hammersPlayer.innerHTML = this._hammer.hammer
         this._lifes.lifes = 3
         this._powers.powers = 3
 
-        window.addEventListener('keypress',handler)
+        window.addEventListener('keypress', handler)
     }
 
-    
+    verifySafezone(top,left) {
+       
+        top = parseInt(top.toString().replace('px',''))
+        left = parseInt(left.toString().replace('px',''))
+        if(left <= 10 && top <= 10) {
+            this._safed.safed = true
+        }
+        else {
+            this._safed.safed = false   
+        }        
+    }
 
     moveObject() {
+
+        this._bodyPlayer.style.top = `${this.positionY}px`
+        this._bodyPlayer.style.left = `${this.positionX}px`
+        this.verifySafezone(this._bodyPlayer.style.top,this._bodyPlayer.style.left)
         
-        this._bodyPlayer.style.top = `${this.positionY - 10}px`
-        this._bodyPlayer.style.left = `${this.positionX - 12}px`
-        this._safed = false
         //this._document.points_of_colision(this.positionX,this.positionY)
     }
 
