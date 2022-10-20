@@ -61,7 +61,7 @@ export class Monsters {
                             
 
                         } else {
-                            this.doc._gamestatus.message = 'Você bateu no planeta! Esse jogo é uma piada pra você?'
+                            this.doc._gamestatus.message = 'Você bateu no planeta! Aperte o Enter e tente de novo!'
                             this.doc._gamestatus.started = false
                             this.doc._modal.type = 'collision'
                         }
