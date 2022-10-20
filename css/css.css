@@ -18,6 +18,7 @@ body .__startMessage {
   height: 200px;
   top: 5px;
   left: 45px;
+  opacity: 0.4;
 }
 body .__points {
   display: flex;
