@@ -187,7 +187,9 @@ export class Document {
             this._addLife += 1
             this._app.removeEventListener(type, handler)
             this._player.finishArrive()
+            this._gamestatus.message = `Passou para o nível ${this._player._viewpoints.points}. Aperte o Enter`
             this._gamestatus.started = false
+            
             
         }
     }
