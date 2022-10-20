@@ -57,11 +57,16 @@ export class Monsters {
                             clearInterval(timer)
                             this.doc._player.createObject(this.doc._player)
                             this.doc._modal.type = 'gameover'
-                            this.doc._player._safed.safed = true 
+                            //this.doc._gamestatus.message = `Game Over! Você alcançou o nível ${this.doc._player._viewpoints.points}!`
+                            
 
                         } else {
+                            this.doc._gamestatus.message = 'Você bateu no planeta! Esse jogo é uma piada pra você?'
+                            this.doc._gamestatus.started = false
                             this.doc._modal.type = 'collision'
                         }
+                        this.doc._gamestatus.started = false
+                        this.doc._player._safed.safed = true
 
 
 

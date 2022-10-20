@@ -8,7 +8,7 @@ export class Proxies {
             set(target, prop, value, receiver) {
                 
                 if(prop == 'points') {
-                    view._pointsPlayer.innerHTML = value
+                    view._pointsPlayer.innerHTML = `Level ${value}`
                 }
                 if(prop == 'lifes') {
                     view._lifesPlayer.className = ''
@@ -52,6 +52,23 @@ export class Proxies {
                         
                         console.log('fez Uma')
                     }
+                }
+
+                if(prop == 'started') {
+                    
+                    if(!value) {
+                        console.log(target)
+                        view._player._safed.safed = true
+                        view._player.resetBodyPlayer()
+                        const message = view._modalMessages.createStartmsg(target.message)
+                        view._body.append(message)
+                     }
+                     else {
+                        console.log('not')
+                        const message = document.querySelector('.__startMessage')
+                        view._modalMessages.removeMsg(message)
+                     }
+
                 }
                 
                 return Reflect.set(target, prop, value, receiver);

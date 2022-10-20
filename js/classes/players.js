@@ -97,8 +97,10 @@ export class Player {
     }
 
     createObject(player) {
+        this._document._gamestatus.started = false
         let handler = (e) => {
             if (e.key == 'Enter') {
+                this._document._gamestatus.started = true
                 this._document.createListener(this)
                 window.removeEventListener('keypress', handler)
             }
@@ -116,6 +118,7 @@ export class Player {
         this._hammersPlayer.innerHTML = this._hammer.hammer
         this._lifes.lifes = 3
         this._powers.powers = 3
+        this._viewpoints.points = 0
 
         window.addEventListener('keypress', handler)
     }
@@ -142,6 +145,8 @@ export class Player {
     }
 
     resetBodyPlayer() {
+        this.positionY = 0
+        this.positionX = 0
         this._bodyPlayer.style.top = `0px`
         this._bodyPlayer.style.left = `0px`
     }

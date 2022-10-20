@@ -1,6 +1,6 @@
 import { Monsters } from "./monsters.js"
 import { Proxies } from "./proxies.js"
-import { Modalmessages } from "./modal.js"
+import { Messages } from "./layouts.js"
 
 export class Document {
     constructor(document) {
@@ -16,9 +16,15 @@ export class Document {
             openModal:false,
             type:null
         },this)
+        this._gamestatus = new Proxies(
+            {
+                started: true,
+                message:'Aperte o enter para começar! Você nunca chegará no Level 20'
+            },
+            this)
         this._body.append(this._app)
         this._player = null
-        this._modalMessages = new Modalmessages(this)
+        this._modalMessages = new Messages(this)
         this._monster = new Monsters(this)
         this.createFinishLine()
         this.calculateFinishLine()
@@ -64,45 +70,51 @@ export class Document {
             this.monsterDestruct()
             
             let handler = (e) => {
+                if(e.key == 'Enter') {
+                    this._gamestatus.started = true
+                }
+                if(this._gamestatus.started) {
+                    this.gameMoves(e,handler)
+                }
                 
-                if (e.code == 'NumpadAdd') {
-                    this._player.movePower += 10
-
-                }
-                if (e.code == 'NumpadSubtract') {
-                    this._player.movePower -= 10
-
-                }
-                if (e.code == 'ArrowRight') {
-                    
-                    if (this._player.positionX < 5) this._player.positionX = this._player.movePower
-                    this._player.positionX = this._player.positionX + this._player.movePower
-                }
-                if (e.code == 'ArrowLeft') {
-                    if (this._player.positionX < 5) this._player.positionX = this._player.movePower
-                    else this._player.positionX = this._player.positionX - this._player.movePower
-
-                }
-                if (e.code == 'ArrowUp') {
-                    if (this._player.positionY < 5) this._player.positionY = this._player.movePower
-                    else this._player.positionY = this._player.positionY - this._player.movePower
-
-                }
-                if (e.code == 'ArrowDown') {
-
-                    if (this._player.positionY < 5) this._player.positionY = this._player.movePower
-                    else this._player.positionY = this._player.positionY + this._player.movePower
-
-                }
-               
-                this.moves(e, handler, 'keydown')
-
             };
             document.addEventListener('keydown', handler)
         
 
     }
 
+    gameMoves(e,handler) {
+        if (e.code == 'NumpadAdd') {
+            this._player.movePower += 10
+
+        }
+        if (e.code == 'NumpadSubtract') {
+            this._player.movePower -= 10
+
+        }
+        if (e.code == 'ArrowRight') {
+            
+            if (this._player.positionX < 5) this._player.positionX = this._player.movePower
+            else this._player.positionX = this._player.positionX + this._player.movePower
+        }
+        if (e.code == 'ArrowLeft') {
+            if (this._player.positionX < 5) this._player.positionX = this._player.movePower
+            else this._player.positionX = this._player.positionX - this._player.movePower
+
+        }
+        if (e.code == 'ArrowUp') {
+            if (this._player.positionY < 5) this._player.positionY = this._player.movePower
+            else this._player.positionY = this._player.positionY - this._player.movePower
+
+        }
+        if (e.code == 'ArrowDown') {
+
+            if (this._player.positionY < 5) this._player.positionY = this._player.movePower
+            else this._player.positionY = this._player.positionY + this._player.movePower
+
+        }
+        this.moves(e, handler, 'keydown')
+    }
 
 
     moves(e,  handler, type = 'mousemove') {
@@ -175,6 +187,7 @@ export class Document {
             this._addLife += 1
             this._app.removeEventListener(type, handler)
             this._player.finishArrive()
+            this._gamestatus.started = false
             
         }
     }
@@ -191,7 +204,7 @@ x
     createFinishLine() {
         let finish = this._document.createElement('div')
         finish.classList.add('__finishLine')
-        finish.innerHTML = 'Finish'
+        finish.innerHTML = 'Level UP'
         this._app.append(finish)
 
     }

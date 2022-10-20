@@ -10,6 +10,15 @@ body {
   background-size: cover;
   font-family: 'Silkscreen', cursive !important;
 }
+body .__startMessage {
+  position: absolute;
+  color: #fff;
+  z-index: 2000;
+  width: 800px;
+  height: 200px;
+  top: 5px;
+  left: 45px;
+}
 body .__points {
   display: flex;
   align-items: center;
@@ -17,7 +26,7 @@ body .__points {
   position: absolute;
   right: 0px;
   top: 0px;
-  width: 40px;
+  width: 100px;
   height: 40px;
   border-bottom: 2px dashed #fff;
   border-left: 2px dashed #fff;
@@ -25,7 +34,7 @@ body .__points {
   text-transform: uppercase;
   font-weight: bold;
   z-index: 2000;
-  font-size: 20px;
+  font-size: 16px;
 }
 body .__hammer {
   display: flex;
@@ -34,7 +43,7 @@ body .__hammer {
   position: absolute;
   width: 100px;
   height: 40px;
-  right: 120px;
+  right: 190px;
   top: 0px;
   color: #fff;
   background-repeat: no-repeat;
@@ -48,7 +57,7 @@ body .__lifes {
   position: absolute;
   width: 60px;
   height: 40px;
-  right: 70px;
+  right: 130px;
   top: 0px;
   background-repeat: no-repeat;
   background-position: center center;
