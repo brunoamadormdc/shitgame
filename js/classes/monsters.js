@@ -1,8 +1,8 @@
 export class Monsters {
     constructor(doc) {
         this.doc = doc
-        this._width = 60
-        this._height = 60
+        this._width = Math.round(window.innerWidth * 0.045)
+        this._height = Math.round(window.innerWidth * 0.045)
 
     }
 
@@ -36,7 +36,7 @@ export class Monsters {
         
         let timer = setInterval(() => {
             
-            if (!this.doc._player._safed.safed) {
+            if (!this.doc._player._data.safed) {
                 
                 let top = parseInt(monster.offsetTop) - 8
                 let left = parseInt(monster.offsetLeft) - 8
@@ -49,7 +49,7 @@ export class Monsters {
                         this.doc._player.decreaseLifes()
                         this.doc._player.positionX = 20
                         this.doc._player.positionY = 20
-                        if (this.doc._player._lifes.lifes < 1) {
+                        if (this.doc._player._data.lifes < 1) {
                             this.doc._player.resetPoints()
                             this.removeAllMonsters()
                             this.doc._played = 0
@@ -57,7 +57,8 @@ export class Monsters {
                             clearInterval(timer)
                             this.doc._player.createObject(this.doc._player)
                             this.doc._modal.type = 'gameover'
-                            //this.doc._gamestatus.message = `Game Over! Você alcançou o nível ${this.doc._player._viewpoints.points}!`
+                            this.doc._gamestatus.started = false
+                            //this.doc._gamestatus.message = `Game Over! Você alcançou o nível ${this.doc._player._data.points}!`
                             
 
                         } else {
@@ -65,15 +66,15 @@ export class Monsters {
                             this.doc._gamestatus.started = false
                             this.doc._modal.type = 'collision'
                         }
-                        this.doc._gamestatus.started = false
-                        this.doc._player._safed.safed = true
+                        
+                        this.doc._player._data.safed = true
 
 
 
                     }
                     else {
                         monster.remove()
-                        this.doc._player._hammer.hammer += 5
+                        this.doc._player._data.hammer += 5
                     }
 
                 }
@@ -157,15 +158,15 @@ export class Monsters {
             this.resetSize()
         }
         else {
-            this._width += 7
-            this._height += 7
+            this._width += Math.round(window.innerWidth * 0.005)
+            this._height += Math.round(window.innerWidth * 0.005)
         }
 
     }
 
     resetSize() {
-        this._width = 60
-        this._height = 60
+        this._width = Math.round(window.innerWidth * 0.045)
+        this._height = Math.round(window.innerWidth * 0.045)
     }
 
 }

@@ -19,7 +19,7 @@ export class Document {
         this._gamestatus = new Proxies(
             {
                 started: true,
-                message:'Aperte o enter para começar! Você nunca chegará no Level 20'
+                message:'Aperte o enter para começar! Você nunca chegará no Level 30'
             },
             this)
         this._body.append(this._app)
@@ -30,7 +30,9 @@ export class Document {
         this.calculateFinishLine()
         this._safeZone.classList.add('__safeZone')
         this.create_new_element('_app',this._safeZone)
-
+        window.addEventListener('resize', (e) => {
+                window.location.reload()
+        })
 
     }
 
@@ -42,17 +44,17 @@ export class Document {
         let handler = (e) => {
             let element = e.srcElement
             
-            if(element.className == '__monsters' && this._player._hammer.hammer > 0) {
+            if(element.className == '__monsters' && this._player._data.hammer > 0) {
                 element.classList.add('__destruction')
                 
                 setTimeout(()=>{
                     
                     element.remove()
-                    if(this._player._hammer.hammer <= 0) {
-                        this._player._hammer.hammer = 0
+                    if(this._player._data.hammer <= 0) {
+                        this._player._data.hammer = 0
                     }
                     else {
-                        this._player._hammer.hammer -= 1
+                        this._player._data.hammer -= 1
                     }
                 },200)
 
@@ -148,7 +150,7 @@ export class Document {
                 player1.decreaseLifes()
                 //this._monster.increaseSizes()
     
-                if (player1._lifes.lifes < 1) {
+                if (player1._data.lifes < 1) {
     
                     player1.resetPoints()
                     this._monster.removeAllMonsters()
@@ -161,7 +163,7 @@ export class Document {
             }
             else {
                 touched[0].remove()
-                player1._hammer.hammer += 5
+                player1._data.hammer += 5
             }
  
         }
@@ -187,7 +189,7 @@ export class Document {
             this._addLife += 1
             this._app.removeEventListener(type, handler)
             this._player.finishArrive()
-            this._gamestatus.message = `Passou para o nível ${this._player._viewpoints.points}. Aperte o Enter`
+            this._gamestatus.message = `Passou para o nível ${this._player._data.points}. Aperte o Enter`
             this._gamestatus.started = false
             
             

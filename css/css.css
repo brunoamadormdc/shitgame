@@ -37,7 +37,7 @@ body .__points {
   z-index: 2000;
   font-size: 16px;
 }
-body .__hammer {
+body .__data {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -54,7 +54,7 @@ body .__hammer {
   z-index: 2000;
   background-image: url('../images/sword.png');
 }
-body .__lifes {
+body .__data {
   position: absolute;
   width: 60px;
   height: 40px;
@@ -65,13 +65,13 @@ body .__lifes {
   background-size: contain;
   z-index: 2000;
 }
-body .__lifes.three {
+body .__data.three {
   background-image: url('../images/three_heart.png');
 }
-body .__lifes.two {
+body .__data.two {
   background-image: url('../images/two_heart.png');
 }
-body .__lifes.one {
+body .__data.one {
   background-image: url('../images/one_heart.png');
 }
 body .container {

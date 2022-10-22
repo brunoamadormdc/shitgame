@@ -11,26 +11,26 @@ export class Proxies {
                     view._pointsPlayer.innerHTML = `Level ${value}`
                 }
                 if(prop == 'lifes') {
-                    view._lifesPlayer.className = ''
+                    view._dataPlayer.className = ''
                     if(value == 3) {
-                        view._lifesPlayer.classList.add('__lifes')
-                        view._lifesPlayer.classList.add('three')
+                        view._dataPlayer.classList.add('__data')
+                        view._dataPlayer.classList.add('three')
                     }
                     if(value == 2) {
-                        view._lifesPlayer.classList.add('__lifes')
-                        view._lifesPlayer.classList.add('two')
+                        view._dataPlayer.classList.add('__data')
+                        view._dataPlayer.classList.add('two')
                     }
                     if(value == 1) {
-                        view._lifesPlayer.classList.add('__lifes')
-                        view._lifesPlayer.classList.add('one')
+                        view._dataPlayer.classList.add('__data')
+                        view._dataPlayer.classList.add('one')
                     }
                     if(value == 0) {
-                        view._lifesPlayer.classList.add('__lifes')
-                        view._lifesPlayer.classList.add('zero')
+                        view._dataPlayer.classList.add('__data')
+                        view._dataPlayer.classList.add('zero')
                     }
                 }
                 if(prop == 'hammer') {
-                    view._hammersPlayer.innerHTML = value
+                    view._datasPlayer.innerHTML = value
                 }
 
                 if(prop == 'safed') {
@@ -58,7 +58,7 @@ export class Proxies {
                     
                     if(!value) {
                         console.log(target)
-                        view._player._safed.safed = true
+                        view._player._data.safed = true
                         view._player.resetBodyPlayer()
                         const message = view._modalMessages.createStartmsg(target.message)
                         view._body.append(message)

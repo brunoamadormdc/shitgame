@@ -5,36 +5,24 @@ export class Player {
 
         this._positionX = mouseX
         this._positionY = mouseY
+        this._width = Math.round(window.innerWidth * 0.018)
+        this._height = Math.round(window.innerWidth * 0.018)
         this._movePower = 5
         this._document = Document
         this._bodyPlayer = document.createElement('div')
         this._pointsPlayer = document.createElement('div')
-        this._lifesPlayer = document.createElement('div')
-        this._powersPlayer = document.createElement('div')
-        this._hammersPlayer = document.createElement('div')
-        this._safed = new Proxies({
-            safed: true
-        }, this)
-        this._hammer = new Proxies(
-            {
-                hammer: 10
-            },
-            this)
-        this._viewpoints = new Proxies(
-            {
-                points: 0
-            },
-            this)
-        this._powers = new Proxies(
-            {
-                powers: 0
-            },
-            this)
-        this._lifes = new Proxies(
-            {
-                lifes: 0
-            },
-            this)
+        this._dataPlayer = document.createElement('div')
+        this._dataPlayer = document.createElement('div')
+        this._datasPlayer = document.createElement('div')
+        this._data = new Proxies({
+            safed: true,
+            hammer: 10,
+            points: 0,
+            powers: 0,
+            powers: 0,
+            lifes: 0
+        },this)
+
 
     }
 
@@ -68,20 +56,20 @@ export class Player {
     }
 
     increasePoints() {
-        this._viewpoints.points += 1
+        this._data.points += 1
     }
 
     resetPoints() {
-        this._lifes.lifes = 3
-        this._powers.powers = 3
-        this._viewpoints.points = 0
-        this._hammer.hammer = 10
-        this._safed.safed = true
+        this._data.lifes = 3
+        this._data.powers = 3
+        this._data.points = 0
+        this._data.hammer = 10
+        this._data.safed = true
         this.movePower = 5
     }
 
     finishArrive() {
-        this._safed.safed = true
+        this._data.safed = true
         this.positionY = 0
         this.positionX = 0
         this._bodyPlayer.style.top = `${this.positionY}px`
@@ -89,17 +77,20 @@ export class Player {
     }
 
     decreaseLifes() {
-        this._lifes.lifes = this._lifes.lifes - 1
+        this._data.lifes = this._data.lifes - 1
     }
 
     decreasePower() {
-        this._powers.powers = this._powers.powers - 1
+        this._data.powers = this._data.powers - 1
     }
 
     createObject(player) {
         this._document._gamestatus.started = false
         let handler = (e) => {
             if (e.key == 'Enter') {
+                this._bodyPlayer.style.width = `${this._width}px`
+                this._bodyPlayer.style.height = `${this._height}px`
+                this._bodyPlayer.style.backgroundSize = `${this._height}px ${this._width}px`
                 this._document._gamestatus.started = true
                 this._document.createListener(this)
                 window.removeEventListener('keypress', handler)
@@ -107,18 +98,18 @@ export class Player {
         }
         this._bodyPlayer.classList.add('__player')
         this._pointsPlayer.classList.add('__points')
-        this._hammersPlayer.classList.add('__hammer')
+        this._datasPlayer.classList.add('__data')
 
-        this._pointsPlayer.innerHTML = this._viewpoints.points
+        this._pointsPlayer.innerHTML = this._data.points
 
         this._document.create_new_element('_app', this._bodyPlayer)
         this._document.create_new_element('_body', this._pointsPlayer)
-        this._document.create_new_element('_body', this._lifesPlayer)
-        this._document.create_new_element('_body', this._hammersPlayer)
-        this._hammersPlayer.innerHTML = this._hammer.hammer
-        this._lifes.lifes = 3
-        this._powers.powers = 3
-        this._viewpoints.points = 0
+        this._document.create_new_element('_body', this._dataPlayer)
+        this._document.create_new_element('_body', this._datasPlayer)
+        this._datasPlayer.innerHTML = this._data.hammer
+        this._data.lifes = 3
+        this._data.powers = 3
+        this._data.points = 0
 
         window.addEventListener('keypress', handler)
     }
@@ -128,10 +119,10 @@ export class Player {
         top = parseInt(top.toString().replace('px',''))
         left = parseInt(left.toString().replace('px',''))
         if(left <= 10 && top <= 10) {
-            this._safed.safed = true
+            this._data.safed = true
         }
         else {
-            this._safed.safed = false   
+            this._data.safed = false   
         }        
     }
 
