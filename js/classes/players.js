@@ -12,8 +12,8 @@ export class Player {
         this._bodyPlayer = document.createElement('div')
         this._pointsPlayer = document.createElement('div')
         this._dataPlayer = document.createElement('div')
-        this._dataPlayer = document.createElement('div')
-        this._datasPlayer = document.createElement('div')
+        this._lifePlayer = document.createElement('div')
+        this._hammersPlayer = document.createElement('div')
         this._data = new Proxies({
             safed: true,
             hammer: 10,
@@ -98,15 +98,15 @@ export class Player {
         }
         this._bodyPlayer.classList.add('__player')
         this._pointsPlayer.classList.add('__points')
-        this._datasPlayer.classList.add('__data')
+        this._hammersPlayer.classList.add('__hammers')
 
         this._pointsPlayer.innerHTML = this._data.points
 
         this._document.create_new_element('_app', this._bodyPlayer)
         this._document.create_new_element('_body', this._pointsPlayer)
-        this._document.create_new_element('_body', this._dataPlayer)
-        this._document.create_new_element('_body', this._datasPlayer)
-        this._datasPlayer.innerHTML = this._data.hammer
+        this._document.create_new_element('_body', this._lifePlayer)
+        this._document.create_new_element('_body', this._hammersPlayer)
+        this._hammersPlayer.innerHTML = this._data.hammer
         this._data.lifes = 3
         this._data.powers = 3
         this._data.points = 0

@@ -11,26 +11,26 @@ export class Proxies {
                     view._pointsPlayer.innerHTML = `Level ${value}`
                 }
                 if(prop == 'lifes') {
-                    view._dataPlayer.className = ''
+                    view._lifePlayer.className = ''
                     if(value == 3) {
-                        view._dataPlayer.classList.add('__data')
-                        view._dataPlayer.classList.add('three')
+                        view._lifePlayer.classList.add('__life')
+                        view._lifePlayer.classList.add('three')
                     }
                     if(value == 2) {
-                        view._dataPlayer.classList.add('__data')
-                        view._dataPlayer.classList.add('two')
+                        view._lifePlayer.classList.add('__life')
+                        view._lifePlayer.classList.add('two')
                     }
                     if(value == 1) {
-                        view._dataPlayer.classList.add('__data')
-                        view._dataPlayer.classList.add('one')
+                        view._lifePlayer.classList.add('__life')
+                        view._lifePlayer.classList.add('one')
                     }
                     if(value == 0) {
-                        view._dataPlayer.classList.add('__data')
-                        view._dataPlayer.classList.add('zero')
+                        view._lifePlayer.classList.add('__life')
+                        view._lifePlayer.classList.add('zero')
                     }
                 }
                 if(prop == 'hammer') {
-                    view._datasPlayer.innerHTML = value
+                    view._hammersPlayer.innerHTML = value
                 }
 
                 if(prop == 'safed') {

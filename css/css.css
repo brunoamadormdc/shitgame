@@ -37,7 +37,7 @@ body .__points {
   z-index: 2000;
   font-size: 16px;
 }
-body .__data {
+body .__hammers {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -54,7 +54,7 @@ body .__data {
   z-index: 2000;
   background-image: url('../images/sword.png');
 }
-body .__data {
+body .__life {
   position: absolute;
   width: 60px;
   height: 40px;
@@ -65,13 +65,13 @@ body .__data {
   background-size: contain;
   z-index: 2000;
 }
-body .__data.three {
+body .__life.three {
   background-image: url('../images/three_heart.png');
 }
-body .__data.two {
+body .__life.two {
   background-image: url('../images/two_heart.png');
 }
-body .__data.one {
+body .__life.one {
   background-image: url('../images/one_heart.png');
 }
 body .container {
@@ -87,8 +87,8 @@ body .container .__safeZone {
   bottom: 0px;
 }
 body .container .__player {
-  width: 30px;
-  height: 30px;
+  width: 25px;
+  height: 25px;
   background-image: url('../images/ufo.png');
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0);
