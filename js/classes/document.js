@@ -1,12 +1,18 @@
 import { Monsters } from "./monsters.js"
 import { Proxies } from "./proxies.js"
 import { Messages } from "./layouts.js"
+import { GamePad } from "./templateElements.js"
+
 
 export class Document {
     constructor(document) {
+        
+
         this._document = document
+        
         this._body = this._document.querySelector('body')
         this._app = this._document.createElement('div')
+        this._gamepad = this._document.createElement('game-pad')
         this._app.classList.add('container')
         this._safeZone = this._document.createElement('div')
         this._played = 0
@@ -22,6 +28,7 @@ export class Document {
                 message:'Aperte o enter para começar! Você nunca chegará no Level 30'
             },
             this)
+              
         this._body.append(this._app)
         this._player = null
         this._modalMessages = new Messages(this)
