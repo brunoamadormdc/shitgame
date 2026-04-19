@@ -17,13 +17,13 @@ function buildLevelDefinition(level) {
 }
 
 function buildVillainCount(level) {
-    if (level <= 1) return 4
-    if (level === 2) return 7
-    if (level === 3) return 10
-    if (level === 4) return 13
-    if (level === 5) return 16
-    if (level === 6) return 20
-    return 24 + (level - 7) * 5
+    if (level <= 1) return 7
+    if (level === 2) return 11
+    if (level === 3) return 15
+    if (level === 4) return 19
+    if (level === 5) return 23
+    if (level === 6) return 27
+    return 31 + (level - 7) * 5
 }
 
 function buildShooterFraction(level) {
@@ -38,6 +38,12 @@ export const GAME_CONFIG = {
     loop: {
         frameDurationMs: 1000 / 60,
         maxDeltaMs: 32
+    },
+    world: {
+        widthMultiplier: 2.2,
+        heightMultiplier: 2,
+        minWidth: 1800,
+        minHeight: 1400
     },
     finishLine: {
         size: 58,

@@ -68,9 +68,9 @@ export class Player {
         }
     }
 
-    clampToViewport() {
-        const maxX = Math.max(0, window.innerWidth - this.width)
-        const maxY = Math.max(0, window.innerHeight - this.height)
+    clampToWorld(worldWidth, worldHeight) {
+        const maxX = Math.max(0, worldWidth - this.width)
+        const maxY = Math.max(0, worldHeight - this.height)
 
         this.positionX = Math.min(Math.max(0, this.positionX), maxX)
         this.positionY = Math.min(Math.max(0, this.positionY), maxY)

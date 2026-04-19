@@ -14,9 +14,9 @@ body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background-image: linear-gradient(rgba(4, 9, 20, 0.35), rgba(4, 9, 20, 0.68)), url('../images/background.jpg');
-    background-position: center center;
-    background-size: cover;
+    background-image:
+        radial-gradient(circle at top, rgba(24, 42, 76, 0.38), rgba(2, 6, 17, 0.94) 58%),
+        linear-gradient(180deg, rgba(3, 8, 18, 0.96), rgba(2, 6, 17, 1));
     font-family: 'Silkscreen', cursive !important;
     color: var(--text-main);
 
@@ -247,6 +247,16 @@ body {
         min-height: 40px;
     }
 
+    .__worldViewport {
+        position: fixed;
+        inset: 0;
+        overflow: hidden;
+        background:
+            radial-gradient(circle at 25% 20%, rgba(98, 176, 255, 0.08), transparent 22%),
+            radial-gradient(circle at 82% 12%, rgba(255, 138, 184, 0.07), transparent 18%),
+            radial-gradient(circle at 60% 78%, rgba(128, 255, 197, 0.06), transparent 20%);
+    }
+
     .__hudHammers strong {
         position: relative;
         padding-left: 16px;
@@ -284,8 +294,37 @@ body {
     }
 
     .container {
+        position: absolute;
+        left: 0;
+        top: 0;
         width: 100vw;
         height: 100vh;
+        will-change: transform;
+        background-color: #040916;
+        background-image:
+            radial-gradient(circle at 18% 24%, rgba(112, 240, 255, 0.1), transparent 13%),
+            radial-gradient(circle at 74% 18%, rgba(255, 138, 184, 0.08), transparent 12%),
+            radial-gradient(circle at 58% 72%, rgba(255, 200, 87, 0.06), transparent 14%),
+            radial-gradient(circle, rgba(255, 255, 255, 0.9) 0 1px, transparent 1.5px),
+            radial-gradient(circle, rgba(132, 179, 255, 0.55) 0 1px, transparent 1.6px),
+            radial-gradient(circle, rgba(255, 146, 197, 0.42) 0 1px, transparent 1.8px),
+            linear-gradient(180deg, rgba(5, 10, 24, 0.84), rgba(3, 8, 19, 0.94));
+        background-size:
+            900px 900px,
+            1100px 1100px,
+            1300px 1300px,
+            140px 140px,
+            220px 220px,
+            320px 320px,
+            100% 100%;
+        background-position:
+            0 0,
+            0 0,
+            0 0,
+            0 0,
+            50px 80px,
+            120px 40px,
+            0 0;
 
         .__safeZone {
             position: absolute;

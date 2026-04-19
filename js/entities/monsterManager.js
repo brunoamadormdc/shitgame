@@ -10,7 +10,15 @@ export class MonsterManager {
         this.activeLevelConfig = null
         this.monsters = []
         this.pendingRespawns = []
+        this.worldSize = {
+            width: window.innerWidth,
+            height: window.innerHeight
+        }
         this.resetBaseSize()
+    }
+
+    setWorldSize(worldSize) {
+        this.worldSize = worldSize
     }
 
     spawnLevel(levelConfig, options = {}) {
@@ -48,7 +56,7 @@ export class MonsterManager {
 
         monster.style.backgroundImage = `url('${texture}')`
         monster.style.borderRadius = '50%'
-        monster.style.setProperty('--enemy-beam-length', `${Math.hypot(window.innerWidth, window.innerHeight)}px`)
+        monster.style.setProperty('--enemy-beam-length', `${Math.hypot(this.worldSize.width, this.worldSize.height)}px`)
         delete monster.dataset.damage
         if (canShoot) {
             monster.classList.add('__shooter')
@@ -273,15 +281,20 @@ export class MonsterManager {
     }
 
     calculatePositions() {
-        const posFinishY = window.innerHeight - this.config.finishLine.size
-        const posFinishX = window.innerWidth - this.config.finishLine.size
-        const posY = Math.floor(Math.random() * window.innerHeight) + 1
-        const posX = Math.floor(Math.random() * window.innerWidth) + 1
+        const safePadding = this.config.safeZone.size + this.config.monsters.spawnOffset
+        const posY = Math.floor(Math.random() * this.worldSize.height) + 1
+        const posX = Math.floor(Math.random() * this.worldSize.width) + 1
 
-        if ((posX >= posFinishX && posX <= window.innerWidth) && (posY >= posFinishY && posY <= window.innerHeight)) {
+        if (posX <= safePadding && posY <= safePadding) {
             return {
-                posY: posY - this.config.monsters.spawnOffset,
-                posX: posX - this.config.monsters.spawnOffset
+                posY: Math.min(
+                    this.worldSize.height - this.baseHeight,
+                    Math.max(safePadding, posY + this.config.monsters.spawnOffset)
+                ),
+                posX: Math.min(
+                    this.worldSize.width - this.baseWidth,
+                    Math.max(safePadding, posX + this.config.monsters.spawnOffset)
+                )
             }
         }
 
@@ -368,8 +381,8 @@ export class MonsterManager {
         const element = monster.element
         let nextX = monster.x + monster.velocityX * deltaSeconds
         let nextY = monster.y + monster.velocityY * deltaSeconds
-        const maxX = Math.max(0, window.innerWidth - monster.width)
-        const maxY = Math.max(0, window.innerHeight - monster.height)
+        const maxX = Math.max(0, this.worldSize.width - monster.width)
+        const maxY = Math.max(0, this.worldSize.height - monster.height)
 
         if (nextX <= 0 || nextX >= maxX) {
             monster.velocityX *= -1
@@ -497,7 +510,7 @@ export class MonsterManager {
     }
 
     hasBeamCollision(monster, playerPosition) {
-        const beamLength = Math.hypot(window.innerWidth, window.innerHeight)
+        const beamLength = Math.hypot(this.worldSize.width, this.worldSize.height)
         const startX = monster.x + monster.width / 2
         const startY = monster.y + monster.height / 2
         const endX = startX + Math.cos(monster.beamAngle) * beamLength

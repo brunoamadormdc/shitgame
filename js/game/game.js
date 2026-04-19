@@ -15,6 +15,8 @@ export class Game {
         this.settings = loadSettings()
         this.isTouchDevice = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0
         this.body = this.document.querySelector('body')
+        this.viewport = this.document.createElement('div')
+        this.viewport.classList.add('__worldViewport')
         this.container = this.document.createElement('div')
         this.container.classList.add('container')
         this.safeZone = this.document.createElement('div')
@@ -23,6 +25,14 @@ export class Game {
         this.finishLine.classList.add('__finishLine')
         this.finishLine.textContent = this.config.finishLine.label
         this.finishLineState = this.createFinishLineState()
+        this.worldSize = {
+            width: window.innerWidth,
+            height: window.innerHeight
+        }
+        this.camera = {
+            x: 0,
+            y: 0
+        }
 
         this.player = new Player(this.document, this.config)
         this.hud = new Hud(this.document)
@@ -68,12 +78,14 @@ export class Game {
     }
 
     mount() {
-        this.body.append(this.container)
+        this.body.append(this.viewport)
+        this.viewport.append(this.container)
         this.container.append(this.safeZone, this.finishLine)
         this.hud.mount()
         this.player.mount(this.container)
         this.settingsPanel.mount()
 
+        this.updateWorldSize()
         this.calculateFinishLine()
         this.refreshGamepadInfo()
         this.renderHud()
@@ -90,9 +102,9 @@ export class Game {
 
     handleResize() {
         const wasPlaying = this.state.canPlay()
-        this.calculateFinishLine()
+        this.updateWorldSize()
         this.player.updateDimensions()
-        this.player.clampToViewport()
+        this.player.clampToWorld(this.worldSize.width, this.worldSize.height)
         this.player.render()
         this.monsters.resetBaseSize()
 
@@ -264,7 +276,7 @@ export class Game {
         }
 
         this.player.moveByVector(movementVector.x, movementVector.y, movementAmount)
-        this.player.clampToViewport()
+        this.player.clampToWorld(this.worldSize.width, this.worldSize.height)
         this.syncPlayerState()
         this.updateFinishLine(deltaSeconds)
         this.monsters.update(
@@ -284,6 +296,7 @@ export class Game {
     render() {
         this.player.render()
         this.renderFinishLine()
+        this.renderCamera()
     }
 
     checkFinishLine() {
@@ -310,19 +323,16 @@ export class Game {
     handleBonusCollision() {
         this.state.gainHammers(this.config.monsters.bonusHammerAmount)
         this.renderHud()
-        this.triggerFeedback('bonus')
     }
 
     handleStarCollision() {
         this.state.activateInvincibility(this.config.player.invincibilityDurationMs)
         this.player.setInvincible(true)
-        this.triggerFeedback('bonus')
     }
 
     handleHeartCollision() {
         this.state.gainLife(1)
         this.renderHud()
-        this.triggerFeedback('bonus')
     }
 
     handleVillainCollision() {
@@ -593,6 +603,24 @@ export class Game {
         }, this.config.monsters.beamDurationMs)
     }
 
+    updateWorldSize() {
+        this.worldSize = {
+            width: Math.max(
+                this.config.world.minWidth,
+                Math.round(window.innerWidth * this.config.world.widthMultiplier)
+            ),
+            height: Math.max(
+                this.config.world.minHeight,
+                Math.round(window.innerHeight * this.config.world.heightMultiplier)
+            )
+        }
+        this.container.style.width = `${this.worldSize.width}px`
+        this.container.style.height = `${this.worldSize.height}px`
+        this.monsters.setWorldSize(this.worldSize)
+        this.calculateFinishLine()
+        this.updateCamera()
+    }
+
     calculateFinishLine() {
         const size = this.config.finishLine.size
 
@@ -601,7 +629,7 @@ export class Game {
         this.finishLineState.collisionRadius = size * this.config.finishLine.collisionRadiusMultiplier
         this.finishLine.style.width = `${size}px`
         this.finishLine.style.height = `${size}px`
-        this.clampFinishLineToViewport()
+        this.clampFinishLineToWorld()
         this.renderFinishLine()
     }
 
@@ -627,10 +655,10 @@ export class Game {
     placeFinishLineRandomly() {
         const padding = this.config.finishLine.spawnPadding
         const safeLimit = this.config.safeZone.size + padding
-        const minX = Math.min(padding, Math.max(0, window.innerWidth - this.finishLineState.width))
-        const minY = Math.min(padding, Math.max(0, window.innerHeight - this.finishLineState.height))
-        const maxX = Math.max(minX, window.innerWidth - this.finishLineState.width - padding)
-        const maxY = Math.max(minY, window.innerHeight - this.finishLineState.height - padding)
+        const minX = Math.min(padding, Math.max(0, this.worldSize.width - this.finishLineState.width))
+        const minY = Math.min(padding, Math.max(0, this.worldSize.height - this.finishLineState.height))
+        const maxX = Math.max(minX, this.worldSize.width - this.finishLineState.width - padding)
+        const maxY = Math.max(minY, this.worldSize.height - this.finishLineState.height - padding)
         let x = 0
         let y = 0
 
@@ -664,8 +692,8 @@ export class Game {
 
         let nextX = this.finishLineState.x + this.finishLineState.velocityX * deltaSeconds
         let nextY = this.finishLineState.y + this.finishLineState.velocityY * deltaSeconds
-        const maxX = Math.max(0, window.innerWidth - this.finishLineState.width)
-        const maxY = Math.max(0, window.innerHeight - this.finishLineState.height)
+        const maxX = Math.max(0, this.worldSize.width - this.finishLineState.width)
+        const maxY = Math.max(0, this.worldSize.height - this.finishLineState.height)
 
         if (nextX <= 0 || nextX >= maxX) {
             this.finishLineState.velocityX *= -1
@@ -688,12 +716,29 @@ export class Game {
         this.finishLine.style.top = `${this.finishLineState.y}px`
     }
 
-    clampFinishLineToViewport() {
-        const maxX = Math.max(0, window.innerWidth - this.finishLineState.width)
-        const maxY = Math.max(0, window.innerHeight - this.finishLineState.height)
+    clampFinishLineToWorld() {
+        const maxX = Math.max(0, this.worldSize.width - this.finishLineState.width)
+        const maxY = Math.max(0, this.worldSize.height - this.finishLineState.height)
 
         this.finishLineState.x = Math.min(Math.max(0, this.finishLineState.x), maxX)
         this.finishLineState.y = Math.min(Math.max(0, this.finishLineState.y), maxY)
+    }
+
+    updateCamera() {
+        const viewportWidth = window.innerWidth
+        const viewportHeight = window.innerHeight
+        const playerCenterX = this.player.positionX + this.player.width / 2
+        const playerCenterY = this.player.positionY + this.player.height / 2
+        const maxX = Math.max(0, this.worldSize.width - viewportWidth)
+        const maxY = Math.max(0, this.worldSize.height - viewportHeight)
+
+        this.camera.x = Math.min(Math.max(0, playerCenterX - viewportWidth / 2), maxX)
+        this.camera.y = Math.min(Math.max(0, playerCenterY - viewportHeight / 2), maxY)
+    }
+
+    renderCamera() {
+        this.updateCamera()
+        this.container.style.transform = `translate(${-this.camera.x}px, ${-this.camera.y}px)`
     }
 
     createFinishLineVelocity() {
