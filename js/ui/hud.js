@@ -17,10 +17,10 @@ export class Hud {
     mount() {
         this.root.innerHTML = `
             <div class="__hudCard">
-                <span class="__hudLabel">Level</span>
+                <span class="__hudLabel">Score</span>
             </div>
             <div class="__hudCard">
-                <span class="__hudLabel">Stage</span>
+                <span class="__hudLabel">Level</span>
             </div>
             <div class="__hudCard">
                 <span class="__hudLabel">Speed</span>
@@ -45,8 +45,8 @@ export class Hud {
         this.body.append(this.root)
     }
 
-    update({ points, currentLevel, lives, hammers, movePower }) {
-        this.levelValue.textContent = points
+    update({ score, currentLevel, lives, hammers, movePower }) {
+        this.levelValue.textContent = `${score}`
         this.stageValue.textContent = currentLevel
         this.speedValue.textContent = `${Math.round(movePower)}`
         this.hammersValue.textContent = `${hammers}`

@@ -48,9 +48,16 @@ export class Game {
             onVillainCollision: () => this.handleVillainCollision(),
             onBonusCollision: () => this.handleBonusCollision(),
             onStarCollision: () => this.handleStarCollision(),
-            onHeartCollision: () => this.handleHeartCollision()
+            onHeartCollision: () => this.handleHeartCollision(),
+            onNearMiss: () => this.handleNearMiss()
         })
-        this.keyState = {
+        this.movementKeyState = {
+            KeyD: false,
+            KeyA: false,
+            KeyW: false,
+            KeyS: false
+        }
+        this.aimKeyState = {
             ArrowRight: false,
             ArrowLeft: false,
             ArrowUp: false,
@@ -58,6 +65,9 @@ export class Game {
         }
         this.frameId = null
         this.lastFrameTime = 0
+        this.dramaticBeatMs = 0
+        this.comboCount = 0
+        this.comboTimerMs = 0
         this.gamepadInfo = {
             connected: false,
             label: 'Nenhum joystick detectado'
@@ -72,7 +82,6 @@ export class Game {
         this.handleResize = this.handleResize.bind(this)
         this.handleKeyDown = this.handleKeyDown.bind(this)
         this.handleKeyUp = this.handleKeyUp.bind(this)
-        this.handleMonsterClick = this.handleMonsterClick.bind(this)
         this.handleGamepadConnection = this.handleGamepadConnection.bind(this)
         this.gameLoop = this.gameLoop.bind(this)
     }
@@ -96,7 +105,6 @@ export class Game {
         window.addEventListener('gamepaddisconnected', this.handleGamepadConnection)
         document.addEventListener('keydown', this.handleKeyDown)
         document.addEventListener('keyup', this.handleKeyUp)
-        this.container.addEventListener('click', this.handleMonsterClick)
         this.frameId = window.requestAnimationFrame(this.gameLoop)
     }
 
@@ -118,33 +126,26 @@ export class Game {
         }
     }
 
-    handleMonsterClick(e) {
-        const element = e.target
-
-        if (!this.state.canPlay()) {
-            return
-        }
-
-        if (!element.classList.contains('__monsters')) {
-            return
-        }
-
-        const monster = this.monsters.getMonsterByElement(element)
-
-        if (!monster || monster.type !== 'villain' || this.state.hammers <= 0) {
-            return
-        }
-
-        this.fireShot(monster)
-    }
-
     handleKeyDown(e) {
-        if (e.code in this.keyState || e.code === 'NumpadAdd' || e.code === 'NumpadSubtract') {
+        if (
+            e.code in this.movementKeyState ||
+            e.code in this.aimKeyState ||
+            e.code === 'NumpadAdd' ||
+            e.code === 'NumpadSubtract' ||
+            e.code === 'Space'
+        ) {
             e.preventDefault()
         }
 
         if (e.key === 'Enter') {
             this.handlePauseInput()
+            return
+        }
+
+        if (e.code === 'Space') {
+            if (!e.repeat) {
+                this.fireCurrentAim()
+            }
             return
         }
 
@@ -158,15 +159,24 @@ export class Game {
             return
         }
 
-        if (e.code in this.keyState) {
-            this.keyState[e.code] = true
+        if (e.code in this.movementKeyState) {
+            this.movementKeyState[e.code] = true
+        }
+
+        if (e.code in this.aimKeyState) {
+            this.aimKeyState[e.code] = true
         }
     }
 
     handleKeyUp(e) {
-        if (e.code in this.keyState) {
+        if (e.code in this.movementKeyState) {
             e.preventDefault()
-            this.keyState[e.code] = false
+            this.movementKeyState[e.code] = false
+        }
+
+        if (e.code in this.aimKeyState) {
+            e.preventDefault()
+            this.aimKeyState[e.code] = false
         }
     }
 
@@ -189,7 +199,7 @@ export class Game {
         this.state.status = GAME_STATES.IDLE
         this.state.setMessage(this.config.messages.start)
         this.state.setSafe(true)
-        this.resetKeyState()
+        this.resetInputState()
         this.player.resetPosition()
         this.player.setSafe(true)
         this.messages.show(this.getOverlayContent())
@@ -203,7 +213,7 @@ export class Game {
     showOverlay(message) {
         this.state.setMessage(message)
         this.state.setSafe(true)
-        this.resetKeyState()
+        this.resetInputState()
         this.player.resetPosition()
         this.player.setSafe(true)
         this.messages.show(this.getOverlayContent())
@@ -242,9 +252,10 @@ export class Game {
 
     gameLoop(timestamp) {
         const rawDelta = this.lastFrameTime === 0 ? this.config.loop.frameDurationMs : timestamp - this.lastFrameTime
-        const deltaTime = Math.min(rawDelta, this.config.loop.maxDeltaMs)
+        const cappedDelta = Math.min(rawDelta, this.config.loop.maxDeltaMs)
         this.lastFrameTime = timestamp
         const gamepadSnapshot = this.pollGamepad()
+        const deltaTime = this.getScaledDelta(cappedDelta)
 
         if (gamepadSnapshot.startPressed) {
             this.handlePauseInput()
@@ -262,8 +273,14 @@ export class Game {
         const deltaSeconds = deltaTime / 1000
         const movementAmount = this.state.movePower * deltaSeconds
         const movementVector = this.getMovementVector(gamepadSnapshot)
+        const aimVector = this.getAimVector(gamepadSnapshot)
 
         this.state.tickInvincibility(deltaTime)
+        this.comboTimerMs = Math.max(0, this.comboTimerMs - deltaTime)
+
+        if (this.comboTimerMs === 0) {
+            this.comboCount = 0
+        }
 
         if (gamepadSnapshot.speedUpPressed) {
             this.state.adjustMovePower(this.config.player.movePowerStep)
@@ -277,6 +294,7 @@ export class Game {
 
         this.player.moveByVector(movementVector.x, movementVector.y, movementAmount)
         this.player.clampToWorld(this.worldSize.width, this.worldSize.height)
+        this.player.setAimDirection(aimVector.x, aimVector.y)
         this.syncPlayerState()
         this.updateFinishLine(deltaSeconds)
         this.monsters.update(
@@ -287,7 +305,7 @@ export class Game {
         )
 
         if (gamepadSnapshot.attackPressed) {
-            this.handleGamepadAttack()
+            this.fireCurrentAim()
         }
 
         this.checkFinishLine()
@@ -313,9 +331,11 @@ export class Game {
 
         const result = this.state.completeLevel()
 
+        this.startDramaticBeat(this.config.fx.levelUpBeatMs)
         this.prepareCurrentLevel()
         this.renderHud()
         this.triggerFeedback('levelup')
+        this.showMomentToast('LEVEL CLEAR')
         this.showOverlay(this.state.message)
         return result
     }
@@ -328,11 +348,17 @@ export class Game {
     handleStarCollision() {
         this.state.activateInvincibility(this.config.player.invincibilityDurationMs)
         this.player.setInvincible(true)
+        this.showMomentToast('STAR MODE')
     }
 
     handleHeartCollision() {
         this.state.gainLife(1)
         this.renderHud()
+        this.showMomentToast('+1 LIFE')
+    }
+
+    handleNearMiss() {
+        this.showMomentToast('NEAR MISS')
     }
 
     handleVillainCollision() {
@@ -371,7 +397,7 @@ export class Game {
 
     pauseGame() {
         this.state.pause('Jogo pausado. Pressione Enter ou Start para continuar.', 'manual')
-        this.resetKeyState()
+        this.resetInputState()
         this.messages.show({
             variant: 'warning',
             eyebrow: 'Paused',
@@ -386,9 +412,13 @@ export class Game {
         this.messages.hide()
     }
 
-    resetKeyState() {
-        for (const key in this.keyState) {
-            this.keyState[key] = false
+    resetInputState() {
+        for (const key in this.movementKeyState) {
+            this.movementKeyState[key] = false
+        }
+
+        for (const key in this.aimKeyState) {
+            this.aimKeyState[key] = false
         }
     }
 
@@ -455,6 +485,8 @@ export class Game {
             return {
                 x: 0,
                 y: 0,
+                aimX: 0,
+                aimY: 0,
                 startPressed: false,
                 attackPressed: false,
                 speedUpPressed: false,
@@ -468,6 +500,8 @@ export class Game {
             return {
                 x: 0,
                 y: 0,
+                aimX: 0,
+                aimY: 0,
                 startPressed: false,
                 attackPressed: false,
                 speedUpPressed: false,
@@ -478,6 +512,8 @@ export class Game {
         const deadzone = this.settings.gamepadDeadzone
         let x = this.applyDeadzone(gamepad.axes[0] ?? 0, deadzone)
         let y = this.applyDeadzone(gamepad.axes[1] ?? 0, deadzone)
+        const aimX = this.applyDeadzone(gamepad.axes[2] ?? 0, deadzone)
+        const aimY = this.applyDeadzone(gamepad.axes[3] ?? 0, deadzone)
 
         if (gamepad.buttons[14]?.pressed) x = -1
         if (gamepad.buttons[15]?.pressed) x = 1
@@ -485,7 +521,7 @@ export class Game {
         if (gamepad.buttons[13]?.pressed) y = 1
 
         const startDown = Boolean(gamepad.buttons[9]?.pressed)
-        const attackDown = Boolean(gamepad.buttons[0]?.pressed)
+        const attackDown = Boolean(gamepad.buttons[7]?.pressed)
         const speedUpDown = Boolean(gamepad.buttons[5]?.pressed)
         const speedDownDown = Boolean(gamepad.buttons[4]?.pressed)
         const startPressed = startDown && !this.previousGamepadButtons.start
@@ -498,7 +534,7 @@ export class Game {
         this.previousGamepadButtons.speedUp = speedUpDown
         this.previousGamepadButtons.speedDown = speedDownDown
 
-        return { x, y, startPressed, attackPressed, speedUpPressed, speedDownPressed }
+        return { x, y, aimX, aimY, startPressed, attackPressed, speedUpPressed, speedDownPressed }
     }
 
     applyDeadzone(value, deadzone) {
@@ -510,8 +546,8 @@ export class Game {
     }
 
     getMovementVector(gamepadSnapshot) {
-        const keyboardX = Number(this.keyState.ArrowRight) - Number(this.keyState.ArrowLeft)
-        const keyboardY = Number(this.keyState.ArrowDown) - Number(this.keyState.ArrowUp)
+        const keyboardX = Number(this.movementKeyState.KeyD) - Number(this.movementKeyState.KeyA)
+        const keyboardY = Number(this.movementKeyState.KeyS) - Number(this.movementKeyState.KeyW)
         let x = keyboardX
         let y = keyboardY
 
@@ -530,40 +566,92 @@ export class Game {
         return { x, y }
     }
 
-    handleGamepadAttack() {
-        if (this.state.hammers <= 0) {
-            return
+    getAimVector(gamepadSnapshot) {
+        let x = Number(this.aimKeyState.ArrowRight) - Number(this.aimKeyState.ArrowLeft)
+        let y = Number(this.aimKeyState.ArrowDown) - Number(this.aimKeyState.ArrowUp)
+
+        if (this.shouldUseGamepad() && (gamepadSnapshot.aimX !== 0 || gamepadSnapshot.aimY !== 0)) {
+            x = gamepadSnapshot.aimX
+            y = gamepadSnapshot.aimY
         }
 
-        const target = this.monsters.getNearestVillain(this.player.getPosition())
+        const magnitude = Math.hypot(x, y)
 
-        if (!target) {
-            return
+        if (magnitude === 0) {
+            return {
+                x: Math.cos(this.player.aimAngle),
+                y: Math.sin(this.player.aimAngle)
+            }
         }
 
-        this.fireShot(target)
+        return {
+            x: x / magnitude,
+            y: y / magnitude
+        }
     }
 
-    fireShot(targetMonster) {
-        if (!targetMonster || this.state.hammers <= 0 || targetMonster.element.classList.contains('__destruction')) {
+    fireCurrentAim() {
+        if (!this.state.canPlay() || this.state.hammers <= 0) {
             return false
         }
 
-        const from = this.getPlayerCenter()
-        const to = this.getMonsterCenter(targetMonster)
+        const origin = this.getPlayerCenter()
+        const direction = {
+            x: Math.cos(this.player.aimAngle),
+            y: Math.sin(this.player.aimAngle)
+        }
+        const maxDistance = Math.hypot(this.worldSize.width, this.worldSize.height)
+        const hit = this.monsters.getFirstVillainOnRay(origin, direction, maxDistance)
+        const endPoint = hit?.point ?? {
+            x: origin.x + direction.x * maxDistance,
+            y: origin.y + direction.y * maxDistance
+        }
 
         this.state.spendHammer()
-        this.renderHud()
-        this.spawnBeam(from, to)
-        const result = this.monsters.applyDamage(targetMonster)
+        this.spawnBeam(origin, endPoint)
+
+        if (!hit) {
+            this.renderHud()
+            return false
+        }
+
+        const result = this.monsters.applyDamage(hit.monster)
+        this.awardShotScore(result)
 
         if (result.destroyed) {
+            this.registerDestroyedPlanet()
+            this.spawnImpactBurst(endPoint)
+            if ((hit.monster.maxHitPoints ?? 1) > 1) {
+                this.startDramaticBeat(this.config.fx.dramaticBeatMs)
+                this.showMomentToast('PLANET DOWN')
+            }
             window.setTimeout(() => {
-                this.monsters.finalizeDestroyedMonster(targetMonster)
+                this.monsters.finalizeDestroyedMonster(hit.monster)
             }, this.config.monsters.destroyDelayMs)
         }
 
+        this.renderHud()
         return true
+    }
+
+    awardShotScore(result) {
+        const baseScore = 10
+        const levelMultiplier = this.state.currentLevel
+        const projectedCombo = result?.destroyed ? this.comboCount + 1 : this.comboCount
+        const comboMultiplier = projectedCombo >= 5 ? projectedCombo : 1
+        const awardedScore = baseScore * levelMultiplier * comboMultiplier
+
+        this.state.gainScore(awardedScore)
+    }
+
+    registerDestroyedPlanet() {
+        this.comboCount += 1
+        this.comboTimerMs = this.config.fx.comboWindowMs
+
+        if (this.comboCount >= 2) {
+            this.showMomentToast(`COMBO x${this.comboCount}`)
+            this.startDramaticBeat(this.config.fx.dramaticBeatMs)
+        }
     }
 
     getPlayerCenter() {
@@ -572,13 +660,6 @@ export class Game {
         return {
             x: position.x + position.width / 2,
             y: position.y + position.height / 2
-        }
-    }
-
-    getMonsterCenter(monster) {
-        return {
-            x: monster.x + monster.width / 2,
-            y: monster.y + monster.height / 2
         }
     }
 
@@ -601,6 +682,55 @@ export class Game {
                 beam.remove()
             }
         }, this.config.monsters.beamDurationMs)
+    }
+
+    spawnImpactBurst(position) {
+        const burst = this.document.createElement('div')
+
+        burst.className = '__impactBurst'
+        burst.style.left = `${position.x}px`
+        burst.style.top = `${position.y}px`
+        this.container.append(burst)
+
+        window.setTimeout(() => {
+            if (burst.isConnected) {
+                burst.remove()
+            }
+        }, this.config.fx.impactBurstDurationMs)
+    }
+
+    showMomentToast(label) {
+        let toast = this.document.querySelector('.__momentToast')
+
+        if (!toast) {
+            toast = this.document.createElement('div')
+            toast.className = '__momentToast'
+            this.body.append(toast)
+        }
+
+        toast.textContent = label
+        toast.classList.remove('__active')
+        void toast.offsetWidth
+        toast.classList.add('__active')
+
+        window.setTimeout(() => {
+            if (toast.textContent === label) {
+                toast.classList.remove('__active')
+            }
+        }, this.config.fx.momentToastDurationMs)
+    }
+
+    startDramaticBeat(durationMs) {
+        this.dramaticBeatMs = Math.max(this.dramaticBeatMs, durationMs)
+    }
+
+    getScaledDelta(deltaTime) {
+        if (this.dramaticBeatMs <= 0) {
+            return deltaTime
+        }
+
+        this.dramaticBeatMs = Math.max(0, this.dramaticBeatMs - deltaTime)
+        return deltaTime * this.config.loop.dramaticTimeScale
     }
 
     updateWorldSize() {
@@ -659,14 +789,24 @@ export class Game {
         const minY = Math.min(padding, Math.max(0, this.worldSize.height - this.finishLineState.height))
         const maxX = Math.max(minX, this.worldSize.width - this.finishLineState.width - padding)
         const maxY = Math.max(minY, this.worldSize.height - this.finishLineState.height - padding)
+        const viewportLeft = this.camera.x
+        const viewportTop = this.camera.y
+        const viewportRight = viewportLeft + window.innerWidth
+        const viewportBottom = viewportTop + window.innerHeight
         let x = 0
         let y = 0
 
-        for (let attempt = 0; attempt < 12; attempt++) {
+        for (let attempt = 0; attempt < 24; attempt++) {
             x = randomInteger(minX, maxX + 1)
             y = randomInteger(minY, maxY + 1)
 
-            if (x > safeLimit || y > safeLimit) {
+            const isOutsideViewport =
+                x + this.finishLineState.width < viewportLeft ||
+                x > viewportRight ||
+                y + this.finishLineState.height < viewportTop ||
+                y > viewportBottom
+
+            if ((x > safeLimit || y > safeLimit) && isOutsideViewport) {
                 break
             }
         }
@@ -690,6 +830,8 @@ export class Game {
             this.randomizeFinishLineDirection()
         }
 
+        this.applyFinishLineEscape()
+
         let nextX = this.finishLineState.x + this.finishLineState.velocityX * deltaSeconds
         let nextY = this.finishLineState.y + this.finishLineState.velocityY * deltaSeconds
         const maxX = Math.max(0, this.worldSize.width - this.finishLineState.width)
@@ -709,6 +851,37 @@ export class Game {
 
         this.finishLineState.x = nextX
         this.finishLineState.y = nextY
+    }
+
+    applyFinishLineEscape() {
+        const finishLineCenterX = this.finishLineState.x + this.finishLineState.width / 2
+        const finishLineCenterY = this.finishLineState.y + this.finishLineState.height / 2
+        const playerCenterX = this.player.positionX + this.player.width / 2
+        const playerCenterY = this.player.positionY + this.player.height / 2
+        const deltaX = finishLineCenterX - playerCenterX
+        const deltaY = finishLineCenterY - playerCenterY
+        const distance = Math.hypot(deltaX, deltaY)
+
+        if (distance === 0 || distance > this.config.finishLine.escapeTriggerDistance) {
+            return
+        }
+
+        const normalizedX = deltaX / distance
+        const normalizedY = deltaY / distance
+        const escapeFactor = 1 - distance / this.config.finishLine.escapeTriggerDistance
+        const boost = this.config.finishLine.escapeBoost * escapeFactor
+
+        this.finishLineState.velocityX += normalizedX * boost
+        this.finishLineState.velocityY += normalizedY * boost
+
+        const speed = Math.hypot(this.finishLineState.velocityX, this.finishLineState.velocityY)
+
+        if (speed > this.config.finishLine.escapeMaxSpeed) {
+            const scale = this.config.finishLine.escapeMaxSpeed / speed
+
+            this.finishLineState.velocityX *= scale
+            this.finishLineState.velocityY *= scale
+        }
     }
 
     renderFinishLine() {
@@ -770,7 +943,7 @@ export class Game {
 
     renderHud() {
         this.hud.update({
-            points: this.state.points,
+            score: this.state.score,
             currentLevel: this.state.currentLevel,
             lives: this.state.lives,
             hammers: this.state.hammers,
@@ -815,8 +988,8 @@ export class Game {
             title: 'Prepare a nave',
             description: this.state.message,
             hint: this.isTouchDevice
-                ? 'Projeto desktop-first: a melhor experiência é no teclado. Setas movem, clique destrói inimigos.'
-                : 'Setas movem, clique destrói inimigos, + e - ajustam a velocidade. No joystick: analógico/D-pad move, A ataca, L1/R1 mudam a velocidade.'
+                ? 'Projeto desktop-first: teclado funciona melhor. WASD move, setas miram e espaço atira.'
+                : 'WASD move, setas miram, espaço atira, + e - ajustam velocidade. No joystick: stick esquerdo move, direito mira, R2 atira, Start pausa.'
         }
     }
 

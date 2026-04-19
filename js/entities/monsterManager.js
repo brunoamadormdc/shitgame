@@ -1,5 +1,5 @@
 export class MonsterManager {
-    constructor({ document, container, config, onVillainCollision, onBonusCollision, onStarCollision, onHeartCollision }) {
+    constructor({ document, container, config, onVillainCollision, onBonusCollision, onStarCollision, onHeartCollision, onNearMiss }) {
         this.document = document
         this.container = container
         this.config = config
@@ -7,6 +7,7 @@ export class MonsterManager {
         this.onBonusCollision = onBonusCollision
         this.onStarCollision = onStarCollision
         this.onHeartCollision = onHeartCollision
+        this.onNearMiss = onNearMiss
         this.activeLevelConfig = null
         this.monsters = []
         this.pendingRespawns = []
@@ -77,6 +78,7 @@ export class MonsterManager {
             canShoot,
             beamAngle: 0,
             beamState: 'idle',
+            nearMissCooldownMs: 0,
             beamTimerMs: canShoot
                 ? randomInteger(this.config.monsters.shooterCooldownMinMs, this.config.monsters.shooterCooldownMaxMs)
                 : 0,
@@ -193,9 +195,23 @@ export class MonsterManager {
         }
 
         for (const monster of this.monsters) {
-            const collided = this.hasCollision(monster, playerPosition)
+            if (monster.type === 'villain') {
+                monster.nearMissCooldownMs = Math.max(0, (monster.nearMissCooldownMs ?? 0) - deltaSeconds * 1000)
+            }
+
+            const collisionDistance = this.getCollisionDistance(monster, playerPosition)
+            const collided = collisionDistance <= 0
 
             if (!collided) {
+                if (
+                    monster.type === 'villain' &&
+                    !isPlayerInvincible &&
+                    monster.nearMissCooldownMs <= 0 &&
+                    collisionDistance <= this.config.monsters.nearMissDistance
+                ) {
+                    monster.nearMissCooldownMs = this.config.monsters.nearMissCooldownMs
+                    this.onNearMiss?.()
+                }
                 continue
             }
 
@@ -227,7 +243,7 @@ export class MonsterManager {
         }
     }
 
-    hasCollision(monster, playerPosition) {
+    getCollisionDistance(monster, playerPosition) {
         const playerCenterX = playerPosition.x + playerPosition.width / 2
         const playerCenterY = playerPosition.y + playerPosition.height / 2
         const monsterCenterX = monster.x + monster.width / 2
@@ -235,7 +251,7 @@ export class MonsterManager {
         const distance = Math.hypot(playerCenterX - monsterCenterX, playerCenterY - monsterCenterY)
         const playerRadius = playerPosition.collisionRadius
 
-        return distance <= monster.collisionRadius + playerRadius
+        return distance - (monster.collisionRadius + playerRadius)
     }
 
     getMonsterByElement(element) {
@@ -263,6 +279,44 @@ export class MonsterManager {
         }
 
         return nearestMonster
+    }
+
+    getFirstVillainOnRay(origin, direction, maxDistance) {
+        let bestHit = null
+        let bestProjection = maxDistance
+
+        for (const monster of this.monsters) {
+            if (monster.type !== 'villain' || !monster.element.isConnected || monster.element.classList.contains('__destruction')) {
+                continue
+            }
+
+            const centerX = monster.x + monster.width / 2
+            const centerY = monster.y + monster.height / 2
+            const offsetX = centerX - origin.x
+            const offsetY = centerY - origin.y
+            const projection = offsetX * direction.x + offsetY * direction.y
+
+            if (projection <= 0 || projection >= bestProjection) {
+                continue
+            }
+
+            const perpendicularDistance = Math.abs(offsetX * direction.y - offsetY * direction.x)
+
+            if (perpendicularDistance > monster.collisionRadius) {
+                continue
+            }
+
+            bestProjection = projection
+            bestHit = {
+                monster,
+                point: {
+                    x: origin.x + direction.x * projection,
+                    y: origin.y + direction.y * projection
+                }
+            }
+        }
+
+        return bestHit
     }
 
     removeAll() {
@@ -352,10 +406,22 @@ export class MonsterManager {
                 continue
             }
 
-            if (!isPlayerSafe && !isPlayerInvincible && this.hasBeamCollision(monster, playerPosition)) {
+            const beamDistance = this.getBeamDistance(monster, playerPosition)
+
+            if (!isPlayerSafe && !isPlayerInvincible && beamDistance <= playerPosition.collisionRadius) {
                 this.resetBeamVisual(monster)
                 this.onVillainCollision()
                 return true
+            }
+
+            if (
+                !isPlayerSafe &&
+                !isPlayerInvincible &&
+                monster.nearMissCooldownMs <= 0 &&
+                beamDistance <= playerPosition.collisionRadius + this.config.monsters.nearMissDistance
+            ) {
+                monster.nearMissCooldownMs = this.config.monsters.nearMissCooldownMs
+                this.onNearMiss?.()
             }
 
             if (monster.beamTimerMs <= 0) {
@@ -509,7 +575,7 @@ export class MonsterManager {
         monster.element.classList.remove('__charging', '__shooting')
     }
 
-    hasBeamCollision(monster, playerPosition) {
+    getBeamDistance(monster, playerPosition) {
         const beamLength = Math.hypot(this.worldSize.width, this.worldSize.height)
         const startX = monster.x + monster.width / 2
         const startY = monster.y + monster.height / 2
@@ -519,7 +585,7 @@ export class MonsterManager {
         const playerCenterY = playerPosition.y + playerPosition.height / 2
         const distance = pointToSegmentDistance(playerCenterX, playerCenterY, startX, startY, endX, endY)
 
-        return distance <= playerPosition.collisionRadius
+        return distance
     }
 }
 

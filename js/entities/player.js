@@ -8,6 +8,7 @@ export class Player {
         this.height = 0
         this.isSafe = true
         this.isInvincible = false
+        this.aimAngle = 0
         this.element = this.document.createElement('div')
         this.element.classList.add('__player')
     }
@@ -85,6 +86,7 @@ export class Player {
     render() {
         this.element.style.top = `${this.positionY}px`
         this.element.style.left = `${this.positionX}px`
+        this.element.style.setProperty('--aim-angle', `${this.aimAngle}rad`)
     }
 
     setSafe(isSafe) {
@@ -95,6 +97,14 @@ export class Player {
     setInvincible(isInvincible) {
         this.isInvincible = isInvincible
         this.syncClasses()
+    }
+
+    setAimDirection(x, y) {
+        if (x === 0 && y === 0) {
+            return
+        }
+
+        this.aimAngle = Math.atan2(y, x)
     }
 
     syncClasses() {

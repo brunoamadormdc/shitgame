@@ -37,7 +37,8 @@ function buildShooterFraction(level) {
 export const GAME_CONFIG = {
     loop: {
         frameDurationMs: 1000 / 60,
-        maxDeltaMs: 32
+        maxDeltaMs: 32,
+        dramaticTimeScale: 0.42
     },
     world: {
         widthMultiplier: 2.2,
@@ -50,6 +51,9 @@ export const GAME_CONFIG = {
         collisionRadiusMultiplier: 0.34,
         minSpeed: 42,
         maxSpeed: 88,
+        escapeTriggerDistance: 260,
+        escapeBoost: 92,
+        escapeMaxSpeed: 168,
         directionChangeMinMs: 1200,
         directionChangeMaxMs: 2600,
         turnJitter: 0.65,
@@ -98,7 +102,16 @@ export const GAME_CONFIG = {
         shooterCooldownMinMs: 2200,
         shooterCooldownMaxMs: 4200,
         respawnDelayMinMs: 1800,
-        respawnDelayMaxMs: 3600
+        respawnDelayMaxMs: 3600,
+        nearMissDistance: 34,
+        nearMissCooldownMs: 900
+    },
+    fx: {
+        dramaticBeatMs: 160,
+        levelUpBeatMs: 220,
+        impactBurstDurationMs: 460,
+        momentToastDurationMs: 950,
+        comboWindowMs: 1600
     },
     progression: {
         getLevel(level) {

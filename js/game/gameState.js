@@ -13,6 +13,7 @@ export class GameState {
     }
 
     resetForNewGame() {
+        this.score = 0
         this.points = 0
         this.lives = this.config.player.initialLives
         this.hammers = this.config.player.initialHammers
@@ -47,6 +48,11 @@ export class GameState {
 
     gainHammers(amount) {
         this.hammers += amount
+    }
+
+    gainScore(amount) {
+        this.score += Math.max(0, Math.round(amount))
+        return this.score
     }
 
     activateInvincibility(durationMs) {
