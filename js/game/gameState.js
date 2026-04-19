@@ -16,7 +16,7 @@ export class GameState {
         this.score = 0
         this.points = 0
         this.lives = this.config.player.initialLives
-        this.hammers = this.config.player.initialHammers
+        this.specialShots = this.config.player.initialHammers
         this.movePower = this.config.player.initialMovePower
         this.invincibilityRemainingMs = 0
         this.nextHeartPickupLevel = 8
@@ -42,12 +42,12 @@ export class GameState {
         this.movePower = Math.min(this.config.player.maxMovePower, Math.max(this.config.player.minMovePower, next))
     }
 
-    spendHammer(amount = 1) {
-        this.hammers = Math.max(0, this.hammers - amount)
+    spendSpecialShot(amount = 1) {
+        this.specialShots = Math.max(0, this.specialShots - amount)
     }
 
-    gainHammers(amount) {
-        this.hammers += amount
+    gainSpecialShots(amount) {
+        this.specialShots += amount
     }
 
     gainScore(amount) {

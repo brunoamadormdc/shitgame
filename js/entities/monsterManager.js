@@ -15,6 +15,7 @@ export class MonsterManager {
             width: window.innerWidth,
             height: window.innerHeight
         }
+        this.lastPlayerPosition = null
         this.resetBaseSize()
     }
 
@@ -45,34 +46,45 @@ export class MonsterManager {
 
     spawnMonster(levelConfig) {
         const { posX, posY } = this.calculatePositions()
+        const archetype = this.pickVillainArchetype(levelConfig)
+        const archetypeConfig = this.getArchetypeConfig(archetype)
         const randomSizeFactor = randomFloat(
             this.config.monsters.minSizeMultiplier,
             this.config.monsters.maxSizeMultiplier
         )
-        const size = this.baseWidth * levelConfig.sizeMultiplier * randomSizeFactor
+        const size = this.baseWidth * levelConfig.sizeMultiplier * randomSizeFactor * (archetypeConfig.sizeMultiplier ?? 1)
         const monster = this.createMonsterElement(posX, posY, size, size)
-        const velocity = this.createVelocity(levelConfig)
+        const velocity = this.createVelocity(levelConfig, archetypeConfig.speedMultiplier ?? 1)
         const texture = createPlanetTexture(this.document, size)
-        const canShoot = Boolean(levelConfig.shooterEnabled && Math.random() < levelConfig.shooterFraction)
+        const canShoot = this.shouldEnableShooter(levelConfig, archetype)
 
         monster.style.backgroundImage = `url('${texture}')`
         monster.style.borderRadius = '50%'
         monster.style.setProperty('--enemy-beam-length', `${Math.hypot(this.worldSize.width, this.worldSize.height)}px`)
         delete monster.dataset.damage
+        monster.dataset.archetype = archetype
         if (canShoot) {
             monster.classList.add('__shooter')
+        }
+        if (archetype !== 'base') {
+            monster.classList.add(`__${archetype}`)
         }
         this.container.append(monster)
         this.monsters.push({
             element: monster,
             type: 'villain',
+            archetype,
             x: posX,
             y: posY,
             width: size,
             height: size,
-            hitPoints: levelConfig.villainHitPoints,
-            maxHitPoints: levelConfig.villainHitPoints,
-            collisionRadius: size * this.config.monsters.collisionRadiusMultiplier + this.config.monsters.collisionPadding,
+            hitPoints: levelConfig.villainHitPoints + (archetypeConfig.hitPointBonus ?? 0),
+            maxHitPoints: levelConfig.villainHitPoints + (archetypeConfig.hitPointBonus ?? 0),
+            collisionRadius:
+                size *
+                    this.config.monsters.collisionRadiusMultiplier *
+                    (archetypeConfig.collisionRadiusMultiplier ?? 1) +
+                this.config.monsters.collisionPadding,
             velocityX: velocity.x,
             velocityY: velocity.y,
             canShoot,
@@ -80,11 +92,11 @@ export class MonsterManager {
             beamState: 'idle',
             nearMissCooldownMs: 0,
             beamTimerMs: canShoot
-                ? randomInteger(this.config.monsters.shooterCooldownMinMs, this.config.monsters.shooterCooldownMaxMs)
+                ? this.createShooterCooldown(archetype)
                 : 0,
             directionTimerMs: randomInteger(
-                this.config.monsters.directionChangeMinMs,
-                this.config.monsters.directionChangeMaxMs
+                this.scaleDirectionTimer(this.config.monsters.directionChangeMinMs, archetype),
+                this.scaleDirectionTimer(this.config.monsters.directionChangeMaxMs, archetype)
             )
         })
     }
@@ -181,6 +193,7 @@ export class MonsterManager {
     }
 
     update(playerPosition, isPlayerSafe, isPlayerInvincible, deltaSeconds) {
+        this.lastPlayerPosition = playerPosition
         this.monsters = this.monsters.filter(monster => monster.element.isConnected)
         this.updateRespawns(deltaSeconds)
 
@@ -427,10 +440,7 @@ export class MonsterManager {
             if (monster.beamTimerMs <= 0) {
                 this.resetBeamVisual(monster)
                 monster.beamState = 'idle'
-                monster.beamTimerMs = randomInteger(
-                    this.config.monsters.shooterCooldownMinMs,
-                    this.config.monsters.shooterCooldownMaxMs
-                )
+                monster.beamTimerMs = this.createShooterCooldown(monster.archetype)
             }
         }
 
@@ -444,6 +454,10 @@ export class MonsterManager {
             this.randomizeDirection(monster)
         }
 
+        if (monster.type === 'villain') {
+            this.applyVillainArchetypeMovement(monster)
+        }
+
         const element = monster.element
         let nextX = monster.x + monster.velocityX * deltaSeconds
         let nextY = monster.y + monster.velocityY * deltaSeconds
@@ -454,12 +468,14 @@ export class MonsterManager {
             monster.velocityX *= -1
             nextX = Math.min(Math.max(0, nextX), maxX)
             this.addDirectionJitter(monster)
+            this.applyRicochetBoost(monster)
         }
 
         if (nextY <= 0 || nextY >= maxY) {
             monster.velocityY *= -1
             nextY = Math.min(Math.max(0, nextY), maxY)
             this.addDirectionJitter(monster)
+            this.applyRicochetBoost(monster)
         }
 
         monster.x = nextX
@@ -486,14 +502,16 @@ export class MonsterManager {
         monster.velocityX = Math.cos(angle) * speed
         monster.velocityY = Math.sin(angle) * speed
         monster.directionTimerMs = randomInteger(
-            this.config.monsters.directionChangeMinMs,
-            this.config.monsters.directionChangeMaxMs
+            this.scaleDirectionTimer(this.config.monsters.directionChangeMinMs, monster.archetype),
+            this.scaleDirectionTimer(this.config.monsters.directionChangeMaxMs, monster.archetype)
         )
     }
 
     addDirectionJitter(monster) {
-        monster.velocityX += randomFloat(-1, 1) * this.config.monsters.turnJitter * 18
-        monster.velocityY += randomFloat(-1, 1) * this.config.monsters.turnJitter * 18
+        const jitterMultiplier = this.getArchetypeConfig(monster.archetype).jitterMultiplier ?? 1
+
+        monster.velocityX += randomFloat(-1, 1) * this.config.monsters.turnJitter * 18 * jitterMultiplier
+        monster.velocityY += randomFloat(-1, 1) * this.config.monsters.turnJitter * 18 * jitterMultiplier
     }
 
     applyDamage(monster, amount = 1) {
@@ -556,9 +574,11 @@ export class MonsterManager {
     }
 
     startBeamWarning(monster) {
+        const warningMultiplier = this.getArchetypeConfig(monster.archetype).warningMultiplier ?? 1
+
         monster.beamState = 'warning'
         monster.beamAngle = randomFloat(0, Math.PI * 2)
-        monster.beamTimerMs = this.config.monsters.shooterWarningMs
+        monster.beamTimerMs = this.config.monsters.shooterWarningMs * warningMultiplier
         monster.element.style.setProperty('--beam-angle', `${monster.beamAngle}rad`)
         monster.element.classList.add('__charging')
         monster.element.classList.remove('__shooting')
@@ -586,6 +606,157 @@ export class MonsterManager {
         const distance = pointToSegmentDistance(playerCenterX, playerCenterY, startX, startY, endX, endY)
 
         return distance
+    }
+
+    pickVillainArchetype(levelConfig) {
+        const level = levelConfig.level ?? 1
+        const availableArchetypes = []
+
+        if (level >= this.config.archetypes.cowardStartLevel) {
+            availableArchetypes.push('coward')
+        }
+
+        if (level >= this.config.archetypes.ricochetStartLevel) {
+            availableArchetypes.push('ricochet')
+        }
+
+        if (level >= this.config.archetypes.suicideStartLevel) {
+            availableArchetypes.push('suicide')
+        }
+
+        if (level >= this.config.archetypes.sniperStartLevel) {
+            availableArchetypes.push('sniper')
+        }
+
+        if (level >= this.config.archetypes.blockerStartLevel) {
+            availableArchetypes.push('blocker')
+        }
+
+        for (const archetype of availableArchetypes) {
+            if (Math.random() < (this.getArchetypeConfig(archetype).chance ?? 0)) {
+                return archetype
+            }
+        }
+
+        return 'base'
+    }
+
+    getArchetypeConfig(archetype) {
+        return this.config.archetypes[archetype] ?? {}
+    }
+
+    shouldEnableShooter(levelConfig, archetype) {
+        if (!levelConfig.shooterEnabled) {
+            return false
+        }
+
+        if (archetype === 'sniper') {
+            return true
+        }
+
+        if (archetype === 'blocker' || archetype === 'suicide') {
+            return false
+        }
+
+        return Math.random() < levelConfig.shooterFraction
+    }
+
+    scaleDirectionTimer(value, archetype) {
+        const multiplier = this.getArchetypeConfig(archetype).directionTimerMultiplier ?? 1
+        return Math.max(250, Math.round(value * multiplier))
+    }
+
+    createShooterCooldown(archetype) {
+        const multiplier = this.getArchetypeConfig(archetype).cooldownMultiplier ?? 1
+        const min = Math.max(350, Math.round(this.config.monsters.shooterCooldownMinMs * multiplier))
+        const max = Math.max(min + 1, Math.round(this.config.monsters.shooterCooldownMaxMs * multiplier))
+
+        return randomInteger(min, max)
+    }
+
+    applyVillainArchetypeMovement(monster) {
+        if (!this.lastPlayerPosition) {
+            return
+        }
+
+        if (monster.archetype === 'coward') {
+            const settings = this.getArchetypeConfig('coward')
+            const monsterCenterX = monster.x + monster.width / 2
+            const monsterCenterY = monster.y + monster.height / 2
+            const playerCenterX = this.lastPlayerPosition.x + this.lastPlayerPosition.width / 2
+            const playerCenterY = this.lastPlayerPosition.y + this.lastPlayerPosition.height / 2
+            const deltaX = monsterCenterX - playerCenterX
+            const deltaY = monsterCenterY - playerCenterY
+            const distance = Math.hypot(deltaX, deltaY)
+
+            if (distance === 0 || distance > settings.escapeTriggerDistance) {
+                return
+            }
+
+            const normalizedX = deltaX / distance
+            const normalizedY = deltaY / distance
+            const escapeFactor = 1 - distance / settings.escapeTriggerDistance
+            const boost = settings.escapeBoost * escapeFactor
+
+            monster.velocityX += normalizedX * boost
+            monster.velocityY += normalizedY * boost
+
+            const speed = Math.hypot(monster.velocityX, monster.velocityY)
+            const maxSpeed = this.config.monsters.maxSpeed * (settings.maxSpeedMultiplier ?? 1)
+
+            if (speed > maxSpeed) {
+                const scale = maxSpeed / speed
+                monster.velocityX *= scale
+                monster.velocityY *= scale
+            }
+
+            return
+        }
+
+        if (monster.archetype !== 'suicide') {
+            return
+        }
+
+        const settings = this.getArchetypeConfig('suicide')
+        const monsterCenterX = monster.x + monster.width / 2
+        const monsterCenterY = monster.y + monster.height / 2
+        const playerCenterX = this.lastPlayerPosition.x + this.lastPlayerPosition.width / 2
+        const playerCenterY = this.lastPlayerPosition.y + this.lastPlayerPosition.height / 2
+        const deltaX = playerCenterX - monsterCenterX
+        const deltaY = playerCenterY - monsterCenterY
+        const distance = Math.hypot(deltaX, deltaY)
+
+        if (distance === 0 || distance > settings.diveTriggerDistance) {
+            return
+        }
+
+        const normalizedX = deltaX / distance
+        const normalizedY = deltaY / distance
+        const diveFactor = 1 - distance / settings.diveTriggerDistance
+        const boost = settings.diveBoost * diveFactor
+
+        monster.velocityX += normalizedX * boost
+        monster.velocityY += normalizedY * boost
+
+        const speed = Math.hypot(monster.velocityX, monster.velocityY)
+        const maxSpeed = this.config.monsters.maxSpeed * (settings.maxSpeedMultiplier ?? 1)
+
+        if (speed > maxSpeed) {
+            const scale = maxSpeed / speed
+            monster.velocityX *= scale
+            monster.velocityY *= scale
+        }
+    }
+
+    applyRicochetBoost(monster) {
+        if (monster.archetype !== 'ricochet') {
+            return
+        }
+
+        const boost = this.getArchetypeConfig('ricochet').bounceBoost ?? 1
+
+        monster.velocityX *= boost
+        monster.velocityY *= boost
     }
 }
 

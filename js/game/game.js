@@ -2,6 +2,7 @@ import { GAME_CONFIG } from "../config/gameConfig.js"
 import { Player } from "../entities/player.js"
 import { MonsterManager } from "../entities/monsterManager.js"
 import { GameState, GAME_STATES } from "./gameState.js"
+import { loadLeaderboard, registerLeaderboardScore } from "./scoreStore.js"
 import { loadSettings, saveSettings } from "./settingsStore.js"
 import { Hud } from "../ui/hud.js"
 import { Messages } from "../ui/messages.js"
@@ -13,6 +14,7 @@ export class Game {
         this.config = GAME_CONFIG
         this.state = new GameState(this.config)
         this.settings = loadSettings()
+        this.leaderboard = loadLeaderboard()
         this.isTouchDevice = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0
         this.body = this.document.querySelector('body')
         this.viewport = this.document.createElement('div')
@@ -25,6 +27,10 @@ export class Game {
         this.finishLine.classList.add('__finishLine')
         this.finishLine.textContent = this.config.finishLine.label
         this.finishLineState = this.createFinishLineState()
+        this.falsePortal = this.document.createElement('div')
+        this.falsePortal.classList.add('__finishLine', '__falsePortal')
+        this.falsePortal.textContent = 'LEVEL?'
+        this.falsePortalState = this.createFalsePortalState()
         this.worldSize = {
             width: window.innerWidth,
             height: window.innerHeight
@@ -68,6 +74,7 @@ export class Game {
         this.dramaticBeatMs = 0
         this.comboCount = 0
         this.comboTimerMs = 0
+        this.gameOverSummary = null
         this.gamepadInfo = {
             connected: false,
             label: 'Nenhum joystick detectado'
@@ -75,6 +82,7 @@ export class Game {
         this.previousGamepadButtons = {
             start: false,
             attack: false,
+            specialAttack: false,
             speedUp: false,
             speedDown: false
         }
@@ -89,7 +97,7 @@ export class Game {
     mount() {
         this.body.append(this.viewport)
         this.viewport.append(this.container)
-        this.container.append(this.safeZone, this.finishLine)
+        this.container.append(this.safeZone, this.falsePortal, this.finishLine)
         this.hud.mount()
         this.player.mount(this.container)
         this.settingsPanel.mount()
@@ -119,6 +127,7 @@ export class Game {
         if (this.state.levelPrepared) {
             this.monsters.spawnLevel(this.state.currentLevelConfig)
             this.placeFinishLineRandomly()
+            this.prepareFalsePortal()
         }
 
         if (wasPlaying) {
@@ -132,7 +141,9 @@ export class Game {
             e.code in this.aimKeyState ||
             e.code === 'NumpadAdd' ||
             e.code === 'NumpadSubtract' ||
-            e.code === 'Space'
+            e.code === 'Space' ||
+            e.code === 'ShiftLeft' ||
+            e.code === 'ShiftRight'
         ) {
             e.preventDefault()
         }
@@ -144,7 +155,14 @@ export class Game {
 
         if (e.code === 'Space') {
             if (!e.repeat) {
-                this.fireCurrentAim()
+                this.fireCurrentAim({ special: false })
+            }
+            return
+        }
+
+        if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+            if (!e.repeat) {
+                this.fireCurrentAim({ special: true })
             }
             return
         }
@@ -183,6 +201,7 @@ export class Game {
     startGame() {
         if (this.state.shouldStartFreshGame()) {
             this.state.resetForNewGame()
+            this.gameOverSummary = null
             this.renderHud()
         }
 
@@ -202,6 +221,7 @@ export class Game {
         this.resetInputState()
         this.player.resetPosition()
         this.player.setSafe(true)
+        this.deactivateFalsePortal()
         this.messages.show(this.getOverlayContent())
         this.settingsPanel.show({
             settings: this.settings,
@@ -238,8 +258,10 @@ export class Game {
             this.state.consumeHeartPickupWindow()
         }
         this.placeFinishLineRandomly()
+        this.prepareFalsePortal()
         this.state.markLevelPrepared(true)
         this.calculateFinishLine()
+        this.calculateFalsePortal()
     }
 
     syncPlayerState() {
@@ -297,6 +319,7 @@ export class Game {
         this.player.setAimDirection(aimVector.x, aimVector.y)
         this.syncPlayerState()
         this.updateFinishLine(deltaSeconds)
+        this.updateFalsePortal(deltaSeconds)
         this.monsters.update(
             this.player.getPosition(),
             this.state.safed,
@@ -305,7 +328,11 @@ export class Game {
         )
 
         if (gamepadSnapshot.attackPressed) {
-            this.fireCurrentAim()
+            this.fireCurrentAim({ special: false })
+        }
+
+        if (gamepadSnapshot.specialAttackPressed) {
+            this.fireCurrentAim({ special: true })
         }
 
         this.checkFinishLine()
@@ -313,11 +340,16 @@ export class Game {
 
     render() {
         this.player.render()
+        this.renderFalsePortal()
         this.renderFinishLine()
         this.renderCamera()
     }
 
     checkFinishLine() {
+        if (this.checkFalsePortalCollision()) {
+            return null
+        }
+
         const playerPosition = this.player.getPosition()
         const playerCenterX = playerPosition.x + playerPosition.width / 2
         const playerCenterY = playerPosition.y + playerPosition.height / 2
@@ -340,9 +372,32 @@ export class Game {
         return result
     }
 
+    checkFalsePortalCollision() {
+        if (!this.falsePortalState.active) {
+            return false
+        }
+
+        const playerPosition = this.player.getPosition()
+        const playerCenterX = playerPosition.x + playerPosition.width / 2
+        const playerCenterY = playerPosition.y + playerPosition.height / 2
+        const portalCenterX = this.falsePortalState.x + this.falsePortalState.width / 2
+        const portalCenterY = this.falsePortalState.y + this.falsePortalState.height / 2
+        const distance = Math.hypot(playerCenterX - portalCenterX, playerCenterY - portalCenterY)
+
+        if (distance > playerPosition.collisionRadius + this.falsePortalState.collisionRadius) {
+            return false
+        }
+
+        this.showMomentToast('FALSE PORTAL')
+        this.deactivateFalsePortal()
+        this.handleVillainCollision(this.config.traps.falsePortalPenaltyMessage)
+        return true
+    }
+
     handleBonusCollision() {
-        this.state.gainHammers(this.config.monsters.bonusHammerAmount)
+        this.state.gainSpecialShots(this.config.monsters.bonusHammerAmount)
         this.renderHud()
+        this.showMomentToast(`+${this.config.monsters.bonusHammerAmount} COMETS`)
     }
 
     handleStarCollision() {
@@ -361,20 +416,21 @@ export class Game {
         this.showMomentToast('NEAR MISS')
     }
 
-    handleVillainCollision() {
+    handleVillainCollision(message = this.config.messages.collision) {
         const reachedLevel = this.state.points
         const remainingLives = this.state.loseLife()
 
         if (remainingLives <= 0) {
             this.monsters.removeAll()
             this.state.setGameOver(reachedLevel)
+            this.gameOverSummary = this.recordGameOverSummary()
             this.renderHud()
             this.triggerFeedback('gameover')
             this.showOverlay(this.state.message)
             return
         }
 
-        this.state.restartCurrentLevel(this.config.messages.collision)
+        this.state.restartCurrentLevel(message)
         this.prepareCurrentLevel()
         this.renderHud()
         this.triggerFeedback('collision')
@@ -480,6 +536,7 @@ export class Game {
         if (!this.shouldUseGamepad()) {
             this.previousGamepadButtons.start = false
             this.previousGamepadButtons.attack = false
+            this.previousGamepadButtons.specialAttack = false
             this.previousGamepadButtons.speedUp = false
             this.previousGamepadButtons.speedDown = false
             return {
@@ -489,6 +546,7 @@ export class Game {
                 aimY: 0,
                 startPressed: false,
                 attackPressed: false,
+                specialAttackPressed: false,
                 speedUpPressed: false,
                 speedDownPressed: false
             }
@@ -504,6 +562,7 @@ export class Game {
                 aimY: 0,
                 startPressed: false,
                 attackPressed: false,
+                specialAttackPressed: false,
                 speedUpPressed: false,
                 speedDownPressed: false
             }
@@ -522,19 +581,22 @@ export class Game {
 
         const startDown = Boolean(gamepad.buttons[9]?.pressed)
         const attackDown = Boolean(gamepad.buttons[7]?.pressed)
-        const speedUpDown = Boolean(gamepad.buttons[5]?.pressed)
+        const specialAttackDown = Boolean(gamepad.buttons[5]?.pressed)
+        const speedUpDown = Boolean(gamepad.buttons[6]?.pressed)
         const speedDownDown = Boolean(gamepad.buttons[4]?.pressed)
         const startPressed = startDown && !this.previousGamepadButtons.start
         const attackPressed = this.state.canPlay() && attackDown && !this.previousGamepadButtons.attack
+        const specialAttackPressed = this.state.canPlay() && specialAttackDown && !this.previousGamepadButtons.specialAttack
         const speedUpPressed = this.state.canPlay() && speedUpDown && !this.previousGamepadButtons.speedUp
         const speedDownPressed = this.state.canPlay() && speedDownDown && !this.previousGamepadButtons.speedDown
 
         this.previousGamepadButtons.start = startDown
         this.previousGamepadButtons.attack = attackDown
+        this.previousGamepadButtons.specialAttack = specialAttackDown
         this.previousGamepadButtons.speedUp = speedUpDown
         this.previousGamepadButtons.speedDown = speedDownDown
 
-        return { x, y, aimX, aimY, startPressed, attackPressed, speedUpPressed, speedDownPressed }
+        return { x, y, aimX, aimY, startPressed, attackPressed, specialAttackPressed, speedUpPressed, speedDownPressed }
     }
 
     applyDeadzone(value, deadzone) {
@@ -590,8 +652,14 @@ export class Game {
         }
     }
 
-    fireCurrentAim() {
-        if (!this.state.canPlay() || this.state.hammers <= 0) {
+    fireCurrentAim(options = {}) {
+        const isSpecial = Boolean(options.special)
+
+        if (!this.state.canPlay()) {
+            return false
+        }
+
+        if (isSpecial && this.state.specialShots <= 0) {
             return false
         }
 
@@ -607,20 +675,24 @@ export class Game {
             y: origin.y + direction.y * maxDistance
         }
 
-        this.state.spendHammer()
-        this.spawnBeam(origin, endPoint)
+        if (isSpecial) {
+            this.state.spendSpecialShot()
+        }
+
+        this.spawnBeam(origin, endPoint, { special: isSpecial })
 
         if (!hit) {
             this.renderHud()
             return false
         }
 
-        const result = this.monsters.applyDamage(hit.monster)
+        const damageAmount = isSpecial ? this.config.weapons.specialDamage : this.config.weapons.basicDamage
+        const result = this.monsters.applyDamage(hit.monster, damageAmount)
         this.awardShotScore(result)
 
         if (result.destroyed) {
             this.registerDestroyedPlanet()
-            this.spawnImpactBurst(endPoint)
+            this.spawnImpactBurst(endPoint, { special: isSpecial })
             if ((hit.monster.maxHitPoints ?? 1) > 1) {
                 this.startDramaticBeat(this.config.fx.dramaticBeatMs)
                 this.showMomentToast('PLANET DOWN')
@@ -663,14 +735,18 @@ export class Game {
         }
     }
 
-    spawnBeam(from, to) {
+    spawnBeam(from, to, options = {}) {
         const beam = this.document.createElement('div')
         const deltaX = to.x - from.x
         const deltaY = to.y - from.y
         const length = Math.hypot(deltaX, deltaY)
         const angle = Math.atan2(deltaY, deltaX)
+        const isSpecial = Boolean(options.special)
 
         beam.className = '__laserBeam'
+        if (isSpecial) {
+            beam.classList.add('__special')
+        }
         beam.style.left = `${from.x}px`
         beam.style.top = `${from.y}px`
         beam.style.width = `${length}px`
@@ -681,13 +757,17 @@ export class Game {
             if (beam.isConnected) {
                 beam.remove()
             }
-        }, this.config.monsters.beamDurationMs)
+        }, isSpecial ? this.config.weapons.specialBeamDurationMs : this.config.weapons.basicBeamDurationMs)
     }
 
-    spawnImpactBurst(position) {
+    spawnImpactBurst(position, options = {}) {
         const burst = this.document.createElement('div')
+        const isSpecial = Boolean(options.special)
 
         burst.className = '__impactBurst'
+        if (isSpecial) {
+            burst.classList.add('__special')
+        }
         burst.style.left = `${position.x}px`
         burst.style.top = `${position.y}px`
         this.container.append(burst)
@@ -696,7 +776,7 @@ export class Game {
             if (burst.isConnected) {
                 burst.remove()
             }
-        }, this.config.fx.impactBurstDurationMs)
+        }, isSpecial ? this.config.fx.specialImpactBurstDurationMs : this.config.fx.impactBurstDurationMs)
     }
 
     showMomentToast(label) {
@@ -718,6 +798,70 @@ export class Game {
                 toast.classList.remove('__active')
             }
         }, this.config.fx.momentToastDurationMs)
+    }
+
+    recordGameOverSummary() {
+        const result = registerLeaderboardScore({
+            score: this.state.score,
+            level: this.state.currentLevel
+        })
+
+        this.leaderboard = result.leaderboard
+
+        return {
+            score: this.state.score,
+            level: this.state.currentLevel,
+            rank: result.rank,
+            isHighScore: result.isHighScore,
+            leaderboard: this.leaderboard
+        }
+    }
+
+    copyGameOverShareText() {
+        if (!this.gameOverSummary) {
+            return
+        }
+
+        const shareText = this.buildShareText()
+
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(shareText)
+                .then(() => this.showMomentToast('RESULTADO COPIADO'))
+                .catch(() => this.copyShareTextFallback(shareText))
+            return
+        }
+
+        this.copyShareTextFallback(shareText)
+    }
+
+    copyShareTextFallback(text) {
+        const textarea = this.document.createElement('textarea')
+
+        textarea.value = text
+        textarea.setAttribute('readonly', 'true')
+        textarea.style.position = 'fixed'
+        textarea.style.opacity = '0'
+        this.body.append(textarea)
+        textarea.select()
+
+        try {
+            this.document.execCommand('copy')
+            this.showMomentToast('RESULTADO COPIADO')
+        }
+        catch {
+            this.showMomentToast('COPIA FALHOU')
+        }
+
+        textarea.remove()
+    }
+
+    buildShareText() {
+        const score = this.gameOverSummary?.score ?? this.state.score
+        const level = this.gameOverSummary?.level ?? this.state.currentLevel
+        const rank = this.gameOverSummary?.rank
+        const rankText = rank ? ` Rank local #${rank}.` : ''
+
+        return `Cheguei no nível ${level} com ${score} pontos no ShitGame e morri no caos espacial.${rankText} Consegue bater isso?`
     }
 
     startDramaticBeat(durationMs) {
@@ -748,6 +892,7 @@ export class Game {
         this.container.style.height = `${this.worldSize.height}px`
         this.monsters.setWorldSize(this.worldSize)
         this.calculateFinishLine()
+        this.calculateFalsePortal()
         this.updateCamera()
     }
 
@@ -763,11 +908,43 @@ export class Game {
         this.renderFinishLine()
     }
 
+    calculateFalsePortal() {
+        const size = Math.round(this.config.finishLine.size * this.config.traps.falsePortalSizeMultiplier)
+
+        this.falsePortalState.width = size
+        this.falsePortalState.height = size
+        this.falsePortalState.collisionRadius = size * this.config.finishLine.collisionRadiusMultiplier
+        this.falsePortal.style.width = `${size}px`
+        this.falsePortal.style.height = `${size}px`
+        this.clampFalsePortalToWorld()
+        this.renderFalsePortal()
+    }
+
     createFinishLineState() {
         const size = this.config.finishLine.size
         const velocity = this.createFinishLineVelocity()
 
         return {
+            x: 0,
+            y: 0,
+            width: size,
+            height: size,
+            collisionRadius: size * this.config.finishLine.collisionRadiusMultiplier,
+            velocityX: velocity.x,
+            velocityY: velocity.y,
+            directionTimerMs: randomInteger(
+                this.config.finishLine.directionChangeMinMs,
+                this.config.finishLine.directionChangeMaxMs
+            )
+        }
+    }
+
+    createFalsePortalState() {
+        const size = Math.round(this.config.finishLine.size * this.config.traps.falsePortalSizeMultiplier)
+        const velocity = this.createFalsePortalVelocity()
+
+        return {
+            active: false,
             x: 0,
             y: 0,
             width: size,
@@ -823,6 +1000,60 @@ export class Game {
         this.renderFinishLine()
     }
 
+    prepareFalsePortal() {
+        const shouldSpawn =
+            this.state.currentLevel >= this.config.traps.falsePortalStartLevel &&
+            Math.random() < this.config.traps.falsePortalChance
+
+        if (!shouldSpawn) {
+            this.deactivateFalsePortal()
+            return
+        }
+
+        this.falsePortalState.active = true
+        this.placeFalsePortalRandomly()
+    }
+
+    placeFalsePortalRandomly() {
+        const padding = this.config.finishLine.spawnPadding
+        const minX = Math.min(padding, Math.max(0, this.worldSize.width - this.falsePortalState.width))
+        const minY = Math.min(padding, Math.max(0, this.worldSize.height - this.falsePortalState.height))
+        const maxX = Math.max(minX, this.worldSize.width - this.falsePortalState.width - padding)
+        const maxY = Math.max(minY, this.worldSize.height - this.falsePortalState.height - padding)
+        const viewportLeft = this.camera.x
+        const viewportTop = this.camera.y
+        const viewportRight = viewportLeft + window.innerWidth
+        const viewportBottom = viewportTop + window.innerHeight
+        let x = 0
+        let y = 0
+
+        for (let attempt = 0; attempt < 24; attempt++) {
+            x = randomInteger(minX, maxX + 1)
+            y = randomInteger(minY, maxY + 1)
+
+            const isOutsideViewport =
+                x + this.falsePortalState.width < viewportLeft ||
+                x > viewportRight ||
+                y + this.falsePortalState.height < viewportTop ||
+                y > viewportBottom
+
+            if (isOutsideViewport) {
+                break
+            }
+        }
+
+        this.falsePortalState.x = x
+        this.falsePortalState.y = y
+        this.falsePortalState.directionTimerMs = randomInteger(
+            this.config.finishLine.directionChangeMinMs,
+            this.config.finishLine.directionChangeMaxMs
+        )
+        const velocity = this.createFalsePortalVelocity()
+        this.falsePortalState.velocityX = velocity.x
+        this.falsePortalState.velocityY = velocity.y
+        this.renderFalsePortal()
+    }
+
     updateFinishLine(deltaSeconds) {
         this.finishLineState.directionTimerMs -= deltaSeconds * 1000
 
@@ -851,6 +1082,38 @@ export class Game {
 
         this.finishLineState.x = nextX
         this.finishLineState.y = nextY
+    }
+
+    updateFalsePortal(deltaSeconds) {
+        if (!this.falsePortalState.active) {
+            return
+        }
+
+        this.falsePortalState.directionTimerMs -= deltaSeconds * 1000
+
+        if (this.falsePortalState.directionTimerMs <= 0) {
+            this.randomizeFalsePortalDirection()
+        }
+
+        let nextX = this.falsePortalState.x + this.falsePortalState.velocityX * deltaSeconds
+        let nextY = this.falsePortalState.y + this.falsePortalState.velocityY * deltaSeconds
+        const maxX = Math.max(0, this.worldSize.width - this.falsePortalState.width)
+        const maxY = Math.max(0, this.worldSize.height - this.falsePortalState.height)
+
+        if (nextX <= 0 || nextX >= maxX) {
+            this.falsePortalState.velocityX *= -1
+            nextX = Math.min(Math.max(0, nextX), maxX)
+            this.addFalsePortalDirectionJitter()
+        }
+
+        if (nextY <= 0 || nextY >= maxY) {
+            this.falsePortalState.velocityY *= -1
+            nextY = Math.min(Math.max(0, nextY), maxY)
+            this.addFalsePortalDirectionJitter()
+        }
+
+        this.falsePortalState.x = nextX
+        this.falsePortalState.y = nextY
     }
 
     applyFinishLineEscape() {
@@ -889,12 +1152,31 @@ export class Game {
         this.finishLine.style.top = `${this.finishLineState.y}px`
     }
 
+    renderFalsePortal() {
+        this.falsePortal.hidden = !this.falsePortalState.active
+
+        if (!this.falsePortalState.active) {
+            return
+        }
+
+        this.falsePortal.style.left = `${this.falsePortalState.x}px`
+        this.falsePortal.style.top = `${this.falsePortalState.y}px`
+    }
+
     clampFinishLineToWorld() {
         const maxX = Math.max(0, this.worldSize.width - this.finishLineState.width)
         const maxY = Math.max(0, this.worldSize.height - this.finishLineState.height)
 
         this.finishLineState.x = Math.min(Math.max(0, this.finishLineState.x), maxX)
         this.finishLineState.y = Math.min(Math.max(0, this.finishLineState.y), maxY)
+    }
+
+    clampFalsePortalToWorld() {
+        const maxX = Math.max(0, this.worldSize.width - this.falsePortalState.width)
+        const maxY = Math.max(0, this.worldSize.height - this.falsePortalState.height)
+
+        this.falsePortalState.x = Math.min(Math.max(0, this.falsePortalState.x), maxX)
+        this.falsePortalState.y = Math.min(Math.max(0, this.falsePortalState.y), maxY)
     }
 
     updateCamera() {
@@ -924,6 +1206,19 @@ export class Game {
         }
     }
 
+    createFalsePortalVelocity() {
+        const speed = randomFloat(
+            this.config.finishLine.minSpeed * this.config.traps.falsePortalSpeedMultiplier,
+            this.config.finishLine.maxSpeed * this.config.traps.falsePortalSpeedMultiplier
+        )
+        const angle = randomFloat(0, Math.PI * 2)
+
+        return {
+            x: Math.cos(angle) * speed,
+            y: Math.sin(angle) * speed
+        }
+    }
+
     randomizeFinishLineDirection() {
         const speed = Math.max(16, Math.hypot(this.finishLineState.velocityX, this.finishLineState.velocityY))
         const angle = randomFloat(0, Math.PI * 2)
@@ -941,24 +1236,69 @@ export class Game {
         this.finishLineState.velocityY += randomFloat(-1, 1) * this.config.finishLine.turnJitter * 16
     }
 
+    randomizeFalsePortalDirection() {
+        const speed = Math.max(14, Math.hypot(this.falsePortalState.velocityX, this.falsePortalState.velocityY))
+        const angle = randomFloat(0, Math.PI * 2)
+
+        this.falsePortalState.velocityX = Math.cos(angle) * speed
+        this.falsePortalState.velocityY = Math.sin(angle) * speed
+        this.falsePortalState.directionTimerMs = randomInteger(
+            this.config.finishLine.directionChangeMinMs,
+            this.config.finishLine.directionChangeMaxMs
+        )
+    }
+
+    addFalsePortalDirectionJitter() {
+        this.falsePortalState.velocityX += randomFloat(-1, 1) * this.config.finishLine.turnJitter * 12
+        this.falsePortalState.velocityY += randomFloat(-1, 1) * this.config.finishLine.turnJitter * 12
+    }
+
+    deactivateFalsePortal() {
+        this.falsePortalState.active = false
+        this.falsePortal.hidden = true
+    }
+
     renderHud() {
         this.hud.update({
             score: this.state.score,
             currentLevel: this.state.currentLevel,
             lives: this.state.lives,
-            hammers: this.state.hammers,
+            specialShots: this.state.specialShots,
             movePower: this.state.movePower
         })
     }
 
     getOverlayContent() {
         if (this.state.status === GAME_STATES.GAME_OVER) {
+            const summary = this.gameOverSummary ?? {
+                score: this.state.score,
+                level: this.state.currentLevel,
+                rank: null,
+                isHighScore: false,
+                leaderboard: this.leaderboard
+            }
+
             return {
                 variant: 'danger',
-                eyebrow: 'Transmission Lost',
+                eyebrow: summary.isHighScore ? 'New Local Record' : 'Transmission Lost',
                 title: 'Game Over',
-                description: this.state.message,
-                hint: 'Pressione Enter para reiniciar do começo.'
+                description: summary.isHighScore
+                    ? 'Você acabou de cravar o maior score local. Agora isso já virou material de print.'
+                    : 'A run morreu, mas o score ficou salvo. Hora de tentar subir essa marca no ranking local.',
+                hint: 'Pressione Enter para reiniciar ou copie o resultado para desafiar alguém.',
+                stats: [
+                    { label: 'Score final', value: `${summary.score}` },
+                    { label: 'Nível alcançado', value: `${summary.level}` },
+                    { label: 'Rank local', value: summary.rank ? `#${summary.rank}` : 'fora do top 5' }
+                ],
+                leaderboard: summary.leaderboard.map((entry, index) => ({
+                    position: index + 1,
+                    score: entry.score,
+                    level: entry.level
+                })),
+                actions: [
+                    { label: 'Copiar resultado', kind: 'primary', onClick: () => this.copyGameOverShareText() }
+                ]
             }
         }
 
@@ -988,8 +1328,8 @@ export class Game {
             title: 'Prepare a nave',
             description: this.state.message,
             hint: this.isTouchDevice
-                ? 'Projeto desktop-first: teclado funciona melhor. WASD move, setas miram e espaço atira.'
-                : 'WASD move, setas miram, espaço atira, + e - ajustam velocidade. No joystick: stick esquerdo move, direito mira, R2 atira, Start pausa.'
+                ? 'Projeto desktop-first: teclado funciona melhor. WASD move, setas miram, espaço atira e Shift solta o cometa.'
+                : 'WASD move, setas miram, espaço atira, Shift usa cometa, + e - ajustam velocidade. No joystick: stick esquerdo move, direito mira, R2 atira, R1 usa cometa, L2 aumenta velocidade, L1 reduz velocidade, Start pausa.'
         }
     }
 

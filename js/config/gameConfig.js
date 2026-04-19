@@ -11,7 +11,7 @@ function buildLevelDefinition(level) {
         shooterEnabled: true,
         shooterFraction: buildShooterFraction(safeLevel),
         respawnEnabled: safeLevel >= 7,
-        villainHitPoints: safeLevel >= 7 ? 3 : 1,
+        villainHitPoints: 4,
         guaranteedStarPickup: safeLevel >= 7
     }
 }
@@ -106,10 +106,69 @@ export const GAME_CONFIG = {
         nearMissDistance: 34,
         nearMissCooldownMs: 900
     },
+    weapons: {
+        basicDamage: 1,
+        specialDamage: 999,
+        basicBeamDurationMs: 110,
+        specialBeamDurationMs: 150
+    },
+    archetypes: {
+        cowardStartLevel: 4,
+        ricochetStartLevel: 6,
+        suicideStartLevel: 7,
+        sniperStartLevel: 8,
+        blockerStartLevel: 10,
+        coward: {
+            chance: 0.22,
+            escapeTriggerDistance: 210,
+            escapeBoost: 54,
+            maxSpeedMultiplier: 1.7,
+            speedMultiplier: 1.1,
+            sizeMultiplier: 0.92
+        },
+        ricochet: {
+            chance: 0.2,
+            speedMultiplier: 1.24,
+            jitterMultiplier: 1.8,
+            directionTimerMultiplier: 0.7,
+            bounceBoost: 1.15,
+            sizeMultiplier: 0.94
+        },
+        suicide: {
+            chance: 0.14,
+            speedMultiplier: 1.18,
+            sizeMultiplier: 0.88,
+            diveTriggerDistance: 240,
+            diveBoost: 128,
+            maxSpeedMultiplier: 2.15
+        },
+        sniper: {
+            chance: 0.16,
+            speedMultiplier: 0.82,
+            sizeMultiplier: 0.96,
+            warningMultiplier: 1.25,
+            cooldownMultiplier: 0.88
+        },
+        blocker: {
+            chance: 0.12,
+            speedMultiplier: 0.62,
+            sizeMultiplier: 1.42,
+            hitPointBonus: 2,
+            collisionRadiusMultiplier: 1.12
+        }
+    },
+    traps: {
+        falsePortalStartLevel: 7,
+        falsePortalChance: 0.34,
+        falsePortalSizeMultiplier: 0.92,
+        falsePortalSpeedMultiplier: 0.84,
+        falsePortalPenaltyMessage: 'Era um portal falso. A nave caiu na armadilha. Aperte Enter e tente de novo.'
+    },
     fx: {
         dramaticBeatMs: 160,
         levelUpBeatMs: 220,
         impactBurstDurationMs: 460,
+        specialImpactBurstDurationMs: 620,
         momentToastDurationMs: 950,
         comboWindowMs: 1600
     },

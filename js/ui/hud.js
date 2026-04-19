@@ -7,7 +7,7 @@ export class Hud {
         this.stageValue = document.createElement('strong')
         this.speedValue = document.createElement('strong')
         this.lifeElement = document.createElement('div')
-        this.hammersValue = document.createElement('strong')
+        this.specialShotsValue = document.createElement('strong')
 
         this.root.className = '__hud'
         this.root.setAttribute('aria-label', 'Game HUD')
@@ -29,7 +29,7 @@ export class Hud {
                 <span class="__hudLabel">Life</span>
             </div>
             <div class="__hudCard __hudHammers">
-                <span class="__hudLabel">Shots</span>
+                <span class="__hudLabel">Comets</span>
             </div>
         `
 
@@ -41,15 +41,15 @@ export class Hud {
         cards[1].append(this.stageValue)
         cards[2].append(this.speedValue)
         cards[3].append(this.lifeElement)
-        cards[4].append(this.hammersValue)
+        cards[4].append(this.specialShotsValue)
         this.body.append(this.root)
     }
 
-    update({ score, currentLevel, lives, hammers, movePower }) {
+    update({ score, currentLevel, lives, specialShots, movePower }) {
         this.levelValue.textContent = `${score}`
         this.stageValue.textContent = currentLevel
         this.speedValue.textContent = `${Math.round(movePower)}`
-        this.hammersValue.textContent = `${hammers}`
+        this.specialShotsValue.textContent = `${specialShots}`
 
         this.lifeElement.className = '__life'
 
