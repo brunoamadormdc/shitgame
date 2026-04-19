@@ -35,6 +35,10 @@ export class Game {
         this.falsePortal.classList.add('__finishLine', '__falsePortal')
         this.falsePortal.textContent = 'LEVEL?'
         this.falsePortalState = this.createFalsePortalState()
+        this.pauseButton = this.document.createElement('button')
+        this.pauseButton.className = '__pauseButton'
+        this.pauseButton.type = 'button'
+        this.pauseButton.textContent = 'II'
         this.worldSize = {
             width: window.innerWidth,
             height: window.innerHeight
@@ -104,6 +108,7 @@ export class Game {
 
     mount() {
         this.body.append(this.viewport)
+        this.body.append(this.pauseButton)
         this.viewport.append(this.container)
         this.container.append(this.safeZone, this.falsePortal, this.finishLine)
         this.hud.mount()
@@ -116,6 +121,8 @@ export class Game {
         this.refreshGamepadInfo()
         this.renderHud()
         this.enterIdle()
+
+        this.pauseButton.addEventListener('click', () => this.handlePauseInput())
 
         window.addEventListener('resize', this.handleResize)
         window.addEventListener('gamepadconnected', this.handleGamepadConnection)
@@ -225,6 +232,7 @@ export class Game {
         this.state.startPlaying()
         if (this.isTouchDevice) {
             this.virtualGamepad.show()
+            this.pauseButton.classList.add('__visible')
         }
         this.tutorialModal.hide()
         this.messages.hide()
@@ -240,6 +248,7 @@ export class Game {
         this.player.setSafe(true)
         this.deactivateFalsePortal()
         this.virtualGamepad.hide()
+        this.pauseButton.classList.remove('__visible')
         this.messages.show(this.getOverlayContent())
         this.settingsPanel.show({
             settings: this.settings,
@@ -259,6 +268,7 @@ export class Game {
         this.player.resetPosition()
         this.player.setSafe(true)
         this.virtualGamepad.hide()
+        this.pauseButton.classList.remove('__visible')
         this.messages.show(this.getOverlayContent())
 
         if (this.state.status === GAME_STATES.GAME_OVER) {
@@ -395,6 +405,7 @@ export class Game {
         this.prepareCurrentLevel()
         this.renderHud()
         this.triggerFeedback('levelup')
+        this.triggerHaptic([20, 40, 20])
         this.showMomentToast('LEVEL CLEAR')
         this.showOverlay(this.state.message)
         return result
@@ -417,6 +428,7 @@ export class Game {
         }
 
         this.showMomentToast('FALSE PORTAL')
+        this.triggerHaptic([30, 40, 30])
         this.deactivateFalsePortal()
         this.handleVillainCollision(this.config.traps.falsePortalPenaltyMessage)
         return true
@@ -425,18 +437,21 @@ export class Game {
     handleBonusCollision() {
         this.state.gainSpecialShots(this.config.monsters.bonusHammerAmount)
         this.renderHud()
+        this.triggerHaptic(18)
         this.showMomentToast(`+${this.config.monsters.bonusHammerAmount} COMETS`)
     }
 
     handleStarCollision() {
         this.state.activateInvincibility(this.config.player.invincibilityDurationMs)
         this.player.setInvincible(true)
+        this.triggerHaptic([16, 26, 16])
         this.showMomentToast('STAR MODE')
     }
 
     handleHeartCollision() {
         this.state.gainLife(1)
         this.renderHud()
+        this.triggerHaptic([12, 18, 12])
         this.showMomentToast('+1 LIFE')
     }
 
@@ -454,6 +469,7 @@ export class Game {
             this.gameOverSummary = this.recordGameOverSummary()
             this.renderHud()
             this.triggerFeedback('gameover')
+            this.triggerHaptic([60, 50, 60])
             this.showOverlay(this.state.message)
             return
         }
@@ -462,6 +478,7 @@ export class Game {
         this.prepareCurrentLevel()
         this.renderHud()
         this.triggerFeedback('collision')
+        this.triggerHaptic(40)
         this.showOverlay(this.state.message)
     }
 
@@ -490,12 +507,14 @@ export class Game {
             hint: 'Pressione Enter ou Start para despausar.'
         })
         this.virtualGamepad.hide()
+        this.pauseButton.classList.remove('__visible')
     }
 
     resumeGame() {
         this.state.startPlaying()
         if (this.isTouchDevice) {
             this.virtualGamepad.show()
+            this.pauseButton.classList.add('__visible')
         }
         this.messages.hide()
     }
@@ -513,6 +532,14 @@ export class Game {
     handleSettingsChange(settings) {
         this.settings = settings
         saveSettings(settings)
+    }
+
+    triggerHaptic(pattern) {
+        if (!this.isTouchDevice || typeof navigator.vibrate !== 'function') {
+            return
+        }
+
+        navigator.vibrate(pattern)
     }
 
     openTutorial(page = 0) {
@@ -736,6 +763,7 @@ export class Game {
         }
 
         this.spawnBeam(origin, endPoint, { special: isSpecial })
+        this.triggerHaptic(isSpecial ? [10, 14, 12] : 10)
 
         if (!hit) {
             this.renderHud()

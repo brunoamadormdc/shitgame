@@ -215,8 +215,8 @@ body .__overlay[data-variant='warning'] .__overlayEyebrow {
 }
 body .__settingsPanel {
   position: fixed;
-  left: 24px;
-  bottom: 24px;
+  left: calc(env(safe-area-inset-left, 0px) + 24px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
   z-index: 4050;
   width: min(360px, calc(100vw - 48px));
   display: none;
@@ -392,7 +392,7 @@ body .__tutorialModal .__tutorialAction {
 }
 body .__virtualGamepad {
   position: fixed;
-  inset: auto 0 12px 0;
+  inset: auto 0 calc(env(safe-area-inset-bottom, 0px) + 12px) 0;
   z-index: 3200;
   display: none;
   align-items: flex-end;
@@ -463,14 +463,32 @@ body .__virtualGamepad .__specialButton {
 }
 body .__hud {
   position: fixed;
-  top: 10px;
-  right: 10px;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  right: calc(env(safe-area-inset-right, 0px) + 10px);
   display: grid;
   grid-template-columns: repeat(3, minmax(62px, auto));
   gap: 6px;
   z-index: 2500;
   width: auto;
   max-width: calc(100vw - 20px);
+}
+body .__pauseButton {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  left: calc(env(safe-area-inset-left, 0px) + 10px);
+  z-index: 3300;
+  display: none;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(7, 12, 24, 0.72);
+  color: var(--text-main);
+  font: inherit;
+  backdrop-filter: blur(4px);
+}
+body .__pauseButton.__visible {
+  display: block;
 }
 body .__hudCard {
   display: flex;
@@ -1164,18 +1182,18 @@ body .container .__finishLine.__falsePortal::after {
 }
 @media (max-width: 720px) {
   body .__settingsPanel {
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
+    left: calc(env(safe-area-inset-left, 0px) + 10px);
+    right: calc(env(safe-area-inset-right, 0px) + 10px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
     width: auto;
   }
   body .__settingsPanel .__settingsPanelCard {
     padding: 12px;
   }
   body .__hud {
-    top: 6px;
+    top: calc(env(safe-area-inset-top, 0px) + 6px);
     left: auto;
-    right: 6px;
+    right: calc(env(safe-area-inset-right, 0px) + 6px);
     grid-template-columns: repeat(3, minmax(48px, auto));
     gap: 4px;
     max-width: calc(100vw - 12px);
@@ -1241,8 +1259,8 @@ body .container .__finishLine.__falsePortal::after {
     height: 30px;
   }
   body .__virtualGamepad {
-    bottom: 8px;
-    padding: 0 8px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+    padding: 0 calc(env(safe-area-inset-right, 0px) + 8px) 0 calc(env(safe-area-inset-left, 0px) + 8px);
   }
   body .__virtualGamepad .__virtualStick {
     width: 84px;
@@ -1258,5 +1276,13 @@ body .container .__finishLine.__falsePortal::after {
     min-width: 68px;
     min-height: 38px;
     font-size: 10px;
+  }
+  body .__pauseButton {
+    top: calc(env(safe-area-inset-top, 0px) + 6px);
+    left: calc(env(safe-area-inset-left, 0px) + 6px);
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    font-size: 11px;
   }
 }
