@@ -501,11 +501,13 @@ export class Game {
         this.state.spendHammer()
         this.renderHud()
         this.spawnBeam(from, to)
-        targetMonster.element.classList.add('__destruction')
+        const result = this.monsters.applyDamage(targetMonster)
 
-        window.setTimeout(() => {
-            this.monsters.removeMonster(targetMonster.element)
-        }, this.config.monsters.destroyDelayMs)
+        if (result.destroyed) {
+            window.setTimeout(() => {
+                this.monsters.finalizeDestroyedMonster(targetMonster)
+            }, this.config.monsters.destroyDelayMs)
+        }
 
         return true
     }

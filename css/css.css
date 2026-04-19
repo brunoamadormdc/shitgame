@@ -290,6 +290,8 @@ body .container .__player.__invincible {
   filter: drop-shadow(0 0 18px rgba(255, 223, 107, 0.85)) saturate(1.2);
 }
 body .container .__monsters {
+  --beam-angle: 0rad;
+  --enemy-beam-length: 100vw;
   border: 1px solid rgba(212, 184, 184, 0);
   background-repeat: no-repeat;
   background-size: cover;
@@ -308,10 +310,66 @@ body .container .__monsters.powerStar {
   filter: drop-shadow(0 0 16px rgba(255, 223, 107, 0.78));
   animation: powerStarPulse 760ms ease-in-out infinite;
 }
+body .container .__monsters.__shooter {
+  box-shadow: inset 0 0 0 1px rgba(255, 222, 173, 0.2);
+}
+body .container .__monsters.__charging::before,
+body .container .__monsters.__shooting::before,
+body .container .__monsters.__charging::after,
+body .container .__monsters.__shooting::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: left center;
+  pointer-events: none;
+}
+body .container .__monsters.__charging {
+  filter: brightness(1.22) saturate(1.15) drop-shadow(0 0 14px rgba(255, 206, 131, 0.38));
+}
+body .container .__monsters.__charging::before {
+  width: calc(var(--enemy-beam-length) * 0.96);
+  height: 2px;
+  border-radius: 999px;
+  opacity: 0.8;
+  transform: translateY(-50%) rotate(var(--beam-angle));
+  background: linear-gradient(90deg, rgba(255, 216, 170, 0.2), rgba(255, 216, 170, 0.65), rgba(255, 216, 170, 0));
+  box-shadow: 0 0 12px rgba(255, 216, 170, 0.26);
+}
+body .container .__monsters.__charging::after {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(255, 240, 199, 0.96), rgba(255, 187, 72, 0.2) 72%, rgba(255, 187, 72, 0));
+  animation: shooterWarningPulse 300ms ease-in-out infinite;
+}
+body .container .__monsters.__shooting::before {
+  width: var(--enemy-beam-length);
+  height: 5px;
+  border-radius: 999px;
+  transform: translateY(-50%) rotate(var(--beam-angle));
+  background: linear-gradient(90deg, rgba(255, 247, 222, 0.1), rgba(255, 121, 121, 0.98) 15%, rgba(255, 241, 189, 0.95) 50%, rgba(255, 121, 121, 0.96) 82%, rgba(255, 121, 121, 0));
+  box-shadow: 0 0 12px rgba(255, 121, 121, 0.72), 0 0 22px rgba(255, 186, 115, 0.38);
+  animation: enemyBeamFire 420ms ease-out forwards;
+}
+body .container .__monsters.__shooting::after {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, #fff8df, rgba(255, 110, 110, 0.22) 70%, rgba(255, 110, 110, 0));
+}
 body .container .__monsters.__destruction {
   opacity: 0.18;
   transform: scale(1.14);
   filter: brightness(1.75) saturate(1.45) drop-shadow(0 0 18px rgba(255, 112, 193, 0.48));
+}
+body .container .__monsters[data-damage='1'] {
+  filter: saturate(0.92) brightness(0.96) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.28));
+}
+body .container .__monsters[data-damage='2'] {
+  filter: saturate(0.82) brightness(0.82) drop-shadow(0 8px 16px rgba(0, 0, 0, 0.28));
 }
 body .container .__laserBeam {
   position: absolute;
@@ -469,6 +527,31 @@ body .container .__finishLine {
   100% {
     transform: scale(1);
     box-shadow: 0 0 18px rgba(130, 255, 167, 0.36), inset 0 0 16px rgba(255, 255, 255, 0.12);
+  }
+}
+@keyframes shooterWarningPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0.55;
+  }
+}
+@keyframes enemyBeamFire {
+  0% {
+    opacity: 0.2;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.92;
   }
 }
 @media (max-width: 720px) {

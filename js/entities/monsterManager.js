@@ -6,12 +6,15 @@ export class MonsterManager {
         this.onVillainCollision = onVillainCollision
         this.onBonusCollision = onBonusCollision
         this.onStarCollision = onStarCollision
+        this.activeLevelConfig = null
         this.monsters = []
+        this.pendingRespawns = []
         this.resetBaseSize()
     }
 
     spawnLevel(levelConfig) {
         this.removeAll()
+        this.activeLevelConfig = levelConfig
 
         for (let i = 0; i < levelConfig.villainCount; i++) {
             this.spawnMonster(levelConfig)
@@ -36,9 +39,15 @@ export class MonsterManager {
         const monster = this.createMonsterElement(posX, posY, size, size)
         const velocity = this.createVelocity(levelConfig)
         const texture = createPlanetTexture(this.document, size)
+        const canShoot = Boolean(levelConfig.shooterEnabled && Math.random() < levelConfig.shooterFraction)
 
         monster.style.backgroundImage = `url('${texture}')`
         monster.style.borderRadius = '50%'
+        monster.style.setProperty('--enemy-beam-length', `${Math.hypot(window.innerWidth, window.innerHeight)}px`)
+        delete monster.dataset.damage
+        if (canShoot) {
+            monster.classList.add('__shooter')
+        }
         this.container.append(monster)
         this.monsters.push({
             element: monster,
@@ -47,9 +56,17 @@ export class MonsterManager {
             y: posY,
             width: size,
             height: size,
+            hitPoints: levelConfig.villainHitPoints,
+            maxHitPoints: levelConfig.villainHitPoints,
             collisionRadius: size * this.config.monsters.collisionRadiusMultiplier + this.config.monsters.collisionPadding,
             velocityX: velocity.x,
             velocityY: velocity.y,
+            canShoot,
+            beamAngle: 0,
+            beamState: 'idle',
+            beamTimerMs: canShoot
+                ? randomInteger(this.config.monsters.shooterCooldownMinMs, this.config.monsters.shooterCooldownMaxMs)
+                : 0,
             directionTimerMs: randomInteger(
                 this.config.monsters.directionChangeMinMs,
                 this.config.monsters.directionChangeMaxMs
@@ -123,8 +140,13 @@ export class MonsterManager {
 
     update(playerPosition, isPlayerSafe, isPlayerInvincible, deltaSeconds) {
         this.monsters = this.monsters.filter(monster => monster.element.isConnected)
+        this.updateRespawns(deltaSeconds)
 
         this.updateMovement(deltaSeconds)
+
+        if (this.updateShooterAttacks(playerPosition, isPlayerSafe, isPlayerInvincible, deltaSeconds)) {
+            return
+        }
 
         if (isPlayerSafe) {
             return
@@ -140,7 +162,7 @@ export class MonsterManager {
             if (monster.type === 'villain') {
                 if (isPlayerInvincible) {
                     monster.element.classList.add('__destruction')
-                    this.removeMonster(monster.element)
+                    this.removeMonster(monster.element, { allowRespawn: true })
                     continue
                 }
 
@@ -198,15 +220,8 @@ export class MonsterManager {
         return nearestMonster
     }
 
-    removeMonster(monster) {
-        this.monsters = this.monsters.filter(item => item.element !== monster)
-
-        if (monster && monster.isConnected) {
-            monster.remove()
-        }
-    }
-
     removeAll() {
+        this.pendingRespawns = []
         this.monsters.forEach(monster => {
             if (monster.element.isConnected) {
                 monster.element.remove()
@@ -221,8 +236,8 @@ export class MonsterManager {
     }
 
     calculatePositions() {
-        const posFinishY = window.innerHeight - this.config.finishLine.width
-        const posFinishX = window.innerWidth - this.config.finishLine.height
+        const posFinishY = window.innerHeight - this.config.finishLine.size
+        const posFinishX = window.innerWidth - this.config.finishLine.size
         const posY = Math.floor(Math.random() * window.innerHeight) + 1
         const posX = Math.floor(Math.random() * window.innerWidth) + 1
 
@@ -243,6 +258,67 @@ export class MonsterManager {
         for (const monster of this.monsters) {
             this.updateMonsterMovement(monster, deltaSeconds)
         }
+    }
+
+    updateRespawns(deltaSeconds) {
+        if (!this.pendingRespawns.length || !this.activeLevelConfig?.respawnEnabled) {
+            return
+        }
+
+        const stillPending = []
+
+        for (const pending of this.pendingRespawns) {
+            pending.remainingMs -= deltaSeconds * 1000
+
+            if (pending.remainingMs <= 0) {
+                this.spawnMonster(this.activeLevelConfig)
+                continue
+            }
+
+            stillPending.push(pending)
+        }
+
+        this.pendingRespawns = stillPending
+    }
+
+    updateShooterAttacks(playerPosition, isPlayerSafe, isPlayerInvincible, deltaSeconds) {
+        for (const monster of this.monsters) {
+            if (monster.type !== 'villain' || !monster.canShoot || monster.element.classList.contains('__destruction')) {
+                continue
+            }
+
+            monster.beamTimerMs -= deltaSeconds * 1000
+
+            if (monster.beamState === 'idle' && monster.beamTimerMs <= 0) {
+                this.startBeamWarning(monster)
+                continue
+            }
+
+            if (monster.beamState === 'warning' && monster.beamTimerMs <= 0) {
+                this.startBeamFiring(monster)
+            }
+
+            if (monster.beamState !== 'firing') {
+                continue
+            }
+
+            if (!isPlayerSafe && !isPlayerInvincible && this.hasBeamCollision(monster, playerPosition)) {
+                this.resetBeamVisual(monster)
+                this.onVillainCollision()
+                return true
+            }
+
+            if (monster.beamTimerMs <= 0) {
+                this.resetBeamVisual(monster)
+                monster.beamState = 'idle'
+                monster.beamTimerMs = randomInteger(
+                    this.config.monsters.shooterCooldownMinMs,
+                    this.config.monsters.shooterCooldownMaxMs
+                )
+            }
+        }
+
+        return false
     }
 
     updateMonsterMovement(monster, deltaSeconds) {
@@ -303,6 +379,98 @@ export class MonsterManager {
         monster.velocityX += randomFloat(-1, 1) * this.config.monsters.turnJitter * 18
         monster.velocityY += randomFloat(-1, 1) * this.config.monsters.turnJitter * 18
     }
+
+    applyDamage(monster, amount = 1) {
+        if (!monster || monster.type !== 'villain' || monster.element.classList.contains('__destruction')) {
+            return { destroyed: false, hitPoints: 0 }
+        }
+
+        monster.hitPoints = Math.max(0, monster.hitPoints - amount)
+        this.updateDamageVisual(monster)
+
+        if (monster.hitPoints > 0) {
+            return { destroyed: false, hitPoints: monster.hitPoints }
+        }
+
+        monster.element.classList.add('__destruction')
+        return { destroyed: true, hitPoints: 0 }
+    }
+
+    updateDamageVisual(monster) {
+        const damageLevel = Math.max(0, monster.maxHitPoints - monster.hitPoints)
+
+        if (damageLevel <= 0) {
+            delete monster.element.dataset.damage
+            return
+        }
+
+        monster.element.dataset.damage = String(damageLevel)
+    }
+
+    finalizeDestroyedMonster(monster) {
+        if (!monster?.element) {
+            return
+        }
+
+        this.removeMonster(monster.element, { allowRespawn: true })
+    }
+
+    removeMonster(monsterElement, options = {}) {
+        const monster = this.getMonsterByElement(monsterElement)
+        const shouldRespawn = Boolean(
+            options.allowRespawn &&
+            monster?.type === 'villain' &&
+            this.activeLevelConfig?.respawnEnabled
+        )
+
+        if (shouldRespawn) {
+            this.pendingRespawns.push({
+                remainingMs: randomInteger(
+                    this.config.monsters.respawnDelayMinMs,
+                    this.config.monsters.respawnDelayMaxMs
+                )
+            })
+        }
+
+        this.monsters = this.monsters.filter(item => item.element !== monsterElement)
+
+        if (monsterElement && monsterElement.isConnected) {
+            monsterElement.remove()
+        }
+    }
+
+    startBeamWarning(monster) {
+        monster.beamState = 'warning'
+        monster.beamAngle = randomFloat(0, Math.PI * 2)
+        monster.beamTimerMs = this.config.monsters.shooterWarningMs
+        monster.element.style.setProperty('--beam-angle', `${monster.beamAngle}rad`)
+        monster.element.classList.add('__charging')
+        monster.element.classList.remove('__shooting')
+    }
+
+    startBeamFiring(monster) {
+        monster.beamState = 'firing'
+        monster.beamTimerMs = this.config.monsters.shooterBeamDurationMs
+        monster.element.classList.add('__shooting')
+        monster.element.classList.remove('__charging')
+    }
+
+    resetBeamVisual(monster) {
+        monster.element.classList.remove('__charging', '__shooting')
+    }
+
+    hasBeamCollision(monster, playerPosition) {
+        const beamLength = Math.hypot(window.innerWidth, window.innerHeight)
+        const startX = monster.x + monster.width / 2
+        const startY = monster.y + monster.height / 2
+        const endX = startX + Math.cos(monster.beamAngle) * beamLength
+        const endY = startY + Math.sin(monster.beamAngle) * beamLength
+        const playerCenterX = playerPosition.x + playerPosition.width / 2
+        const playerCenterY = playerPosition.y + playerPosition.height / 2
+        const distance = pointToSegmentDistance(playerCenterX, playerCenterY, startX, startY, endX, endY)
+
+        return distance <= playerPosition.collisionRadius
+    }
 }
 
 function randomInteger(min, max) {
@@ -313,6 +481,22 @@ function randomInteger(min, max) {
 
 function randomFloat(min, max) {
     return Math.random() * (max - min) + min
+}
+
+function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
+    const dx = x2 - x1
+    const dy = y2 - y1
+    const denominator = dx * dx + dy * dy
+
+    if (denominator === 0) {
+        return Math.hypot(px - x1, py - y1)
+    }
+
+    const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / denominator))
+    const nearestX = x1 + t * dx
+    const nearestY = y1 + t * dy
+
+    return Math.hypot(px - nearestX, py - nearestY)
 }
 
 function pickRandom(items) {

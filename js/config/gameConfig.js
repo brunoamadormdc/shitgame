@@ -4,11 +4,25 @@ function buildLevelDefinition(level) {
 
     return {
         level: safeLevel,
-        villainCount: completedLevels * completedLevels,
+        villainCount: buildVillainCount(safeLevel),
         goodMonsterCount: Math.floor(completedLevels / 3),
         sizeMultiplier: Math.min(1 + (safeLevel - 1) * 0.08, 2),
-        animationDurationMultiplier: Math.max(0.45, 1 - (safeLevel - 1) * 0.05)
+        animationDurationMultiplier: Math.max(0.45, 1 - (safeLevel - 1) * 0.05),
+        shooterEnabled: safeLevel >= 7,
+        shooterFraction: safeLevel >= 7 ? 1 / 3 : 0,
+        respawnEnabled: safeLevel >= 7,
+        villainHitPoints: safeLevel > 12 ? 3 : 1
     }
+}
+
+function buildVillainCount(level) {
+    const completedLevels = Math.max(0, level - 1)
+
+    if (level < 7) {
+        return completedLevels * completedLevels
+    }
+
+    return 30 + (level - 7) * 5
 }
 
 export const GAME_CONFIG = {
@@ -61,7 +75,13 @@ export const GAME_CONFIG = {
         directionChangeMinMs: 900,
         directionChangeMaxMs: 2400,
         turnJitter: 0.85,
-        bonusHammerAmount: 20
+        bonusHammerAmount: 20,
+        shooterWarningMs: 1000,
+        shooterBeamDurationMs: 420,
+        shooterCooldownMinMs: 2200,
+        shooterCooldownMaxMs: 4200,
+        respawnDelayMinMs: 1800,
+        respawnDelayMaxMs: 3600
     },
     progression: {
         getLevel(level) {
