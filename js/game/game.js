@@ -4,9 +4,11 @@ import { MonsterManager } from "../entities/monsterManager.js"
 import { GameState, GAME_STATES } from "./gameState.js"
 import { loadLeaderboard, registerLeaderboardScore } from "./scoreStore.js"
 import { loadSettings, saveSettings } from "./settingsStore.js"
+import { hasSeenTutorial, markTutorialSeen } from "./tutorialStore.js"
 import { Hud } from "../ui/hud.js"
 import { Messages } from "../ui/messages.js"
 import { SettingsPanel } from "../ui/settingsPanel.js"
+import { TutorialModal } from "../ui/tutorialModal.js"
 
 export class Game {
     constructor(document) {
@@ -15,6 +17,7 @@ export class Game {
         this.state = new GameState(this.config)
         this.settings = loadSettings()
         this.leaderboard = loadLeaderboard()
+        this.tutorialHasBeenSeen = hasSeenTutorial()
         this.isTouchDevice = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0
         this.body = this.document.querySelector('body')
         this.viewport = this.document.createElement('div')
@@ -43,6 +46,9 @@ export class Game {
         this.player = new Player(this.document, this.config)
         this.hud = new Hud(this.document)
         this.messages = new Messages(this.document)
+        this.tutorialModal = new TutorialModal(this.document, {
+            onClose: () => this.handleTutorialClose()
+        })
         this.settingsPanel = new SettingsPanel(this.document, {
             onChange: (settings) => this.handleSettingsChange(settings),
             onStart: () => this.startGame()
@@ -149,6 +155,10 @@ export class Game {
         }
 
         if (e.key === 'Enter') {
+            if (this.tutorialModal.isVisible()) {
+                this.tutorialModal.hide()
+                return
+            }
             this.handlePauseInput()
             return
         }
@@ -210,6 +220,7 @@ export class Game {
         }
 
         this.state.startPlaying()
+        this.tutorialModal.hide()
         this.messages.hide()
         this.settingsPanel.hide()
     }
@@ -228,6 +239,10 @@ export class Game {
             gamepadStatus: this.gamepadInfo.label,
             startLabel: 'Começar'
         })
+
+        if (!this.tutorialHasBeenSeen) {
+            this.openTutorial()
+        }
     }
 
     showOverlay(message) {
@@ -347,6 +362,10 @@ export class Game {
 
     checkFinishLine() {
         if (this.checkFalsePortalCollision()) {
+            return null
+        }
+
+        if (!this.finishLineState.active) {
             return null
         }
 
@@ -481,6 +500,17 @@ export class Game {
     handleSettingsChange(settings) {
         this.settings = settings
         saveSettings(settings)
+    }
+
+    openTutorial(page = 0) {
+        this.tutorialModal.show(page)
+    }
+
+    handleTutorialClose() {
+        if (!this.tutorialHasBeenSeen) {
+            this.tutorialHasBeenSeen = true
+            markTutorialSeen()
+        }
     }
 
     handleGamepadConnection() {
@@ -669,7 +699,9 @@ export class Game {
             y: Math.sin(this.player.aimAngle)
         }
         const maxDistance = Math.hypot(this.worldSize.width, this.worldSize.height)
-        const hit = this.monsters.getFirstVillainOnRay(origin, direction, maxDistance)
+        const monsterHit = this.monsters.getFirstVillainOnRay(origin, direction, maxDistance)
+        const finishLineHit = this.getFinishLineRayHit(origin, direction, maxDistance)
+        const hit = this.pickPriorityShotHit(monsterHit, finishLineHit)
         const endPoint = hit?.point ?? {
             x: origin.x + direction.x * maxDistance,
             y: origin.y + direction.y * maxDistance
@@ -684,6 +716,12 @@ export class Game {
         if (!hit) {
             this.renderHud()
             return false
+        }
+
+        if (hit.type === 'finishLine') {
+            this.handleFinishLineShot(endPoint, { special: isSpecial })
+            this.renderHud()
+            return true
         }
 
         const damageAmount = isSpecial ? this.config.weapons.specialDamage : this.config.weapons.basicDamage
@@ -733,6 +771,74 @@ export class Game {
             x: position.x + position.width / 2,
             y: position.y + position.height / 2
         }
+    }
+
+    getFinishLineRayHit(origin, direction, maxDistance) {
+        if (!this.finishLineState.active) {
+            return null
+        }
+
+        const centerX = this.finishLineState.x + this.finishLineState.width / 2
+        const centerY = this.finishLineState.y + this.finishLineState.height / 2
+        const offsetX = centerX - origin.x
+        const offsetY = centerY - origin.y
+        const projection = offsetX * direction.x + offsetY * direction.y
+
+        if (projection <= 0 || projection >= maxDistance) {
+            return null
+        }
+
+        const perpendicularDistance = Math.abs(offsetX * direction.y - offsetY * direction.x)
+
+        if (perpendicularDistance > this.finishLineState.collisionRadius) {
+            return null
+        }
+
+        return {
+            type: 'finishLine',
+            projection,
+            point: {
+                x: origin.x + direction.x * projection,
+                y: origin.y + direction.y * projection
+            }
+        }
+    }
+
+    pickPriorityShotHit(monsterHit, finishLineHit) {
+        if (!monsterHit) {
+            return finishLineHit
+        }
+
+        if (!finishLineHit) {
+            return {
+                ...monsterHit,
+                type: 'monster',
+                projection: Math.hypot(monsterHit.point.x - this.getPlayerCenter().x, monsterHit.point.y - this.getPlayerCenter().y)
+            }
+        }
+
+        const monsterProjection = Math.hypot(
+            monsterHit.point.x - this.getPlayerCenter().x,
+            monsterHit.point.y - this.getPlayerCenter().y
+        )
+
+        return finishLineHit.projection < monsterProjection
+            ? finishLineHit
+            : { ...monsterHit, type: 'monster', projection: monsterProjection }
+    }
+
+    handleFinishLineShot(position, options = {}) {
+        this.spawnImpactBurst(position, { special: true })
+        this.startDramaticBeat(this.config.fx.levelUpBeatMs)
+        this.state.applyScorePenaltyDivisor(this.config.finishLine.scorePenaltyDivisor)
+        this.finishLineState.active = false
+        this.finishLineState.enraged = false
+        this.finishLineState.wasShotThisStage = true
+        this.finishLineState.respawnTimerMs = this.config.finishLine.respawnDelayMs
+        this.finishLineState.beamState = 'idle'
+        this.finishLineState.beamTimerMs = this.createFinishLineBeamCooldown()
+        this.finishLine.classList.remove('__charging', '__shooting', '__enraged')
+        this.showMomentToast('LEVEL DOWN')
     }
 
     spawnBeam(from, to, options = {}) {
@@ -925,6 +1031,10 @@ export class Game {
         const velocity = this.createFinishLineVelocity()
 
         return {
+            active: true,
+            enraged: false,
+            wasShotThisStage: false,
+            respawnTimerMs: 0,
             x: 0,
             y: 0,
             width: size,
@@ -932,6 +1042,9 @@ export class Game {
             collisionRadius: size * this.config.finishLine.collisionRadiusMultiplier,
             velocityX: velocity.x,
             velocityY: velocity.y,
+            beamAngle: 0,
+            beamState: 'idle',
+            beamTimerMs: this.createFinishLineBeamCooldown(),
             directionTimerMs: randomInteger(
                 this.config.finishLine.directionChangeMinMs,
                 this.config.finishLine.directionChangeMaxMs
@@ -959,7 +1072,8 @@ export class Game {
         }
     }
 
-    placeFinishLineRandomly() {
+    placeFinishLineRandomly(options = {}) {
+        const preserveEnraged = Boolean(options.preserveEnraged)
         const padding = this.config.finishLine.spawnPadding
         const safeLimit = this.config.safeZone.size + padding
         const minX = Math.min(padding, Math.max(0, this.worldSize.width - this.finishLineState.width))
@@ -988,6 +1102,14 @@ export class Game {
             }
         }
 
+        this.finishLineState.active = true
+        this.finishLineState.enraged = preserveEnraged ? this.finishLineState.enraged : false
+        this.finishLineState.wasShotThisStage = preserveEnraged ? this.finishLineState.wasShotThisStage : false
+        this.finishLineState.respawnTimerMs = 0
+        this.finishLineState.beamState = 'idle'
+        this.finishLineState.beamTimerMs = this.createFinishLineBeamCooldown()
+        this.finishLine.classList.remove('__charging', '__shooting')
+        this.finishLine.classList.toggle('__enraged', this.finishLineState.enraged)
         this.finishLineState.x = x
         this.finishLineState.y = y
         this.finishLineState.directionTimerMs = randomInteger(
@@ -1055,6 +1177,25 @@ export class Game {
     }
 
     updateFinishLine(deltaSeconds) {
+        if (!this.finishLineState.active) {
+            if (this.finishLineState.respawnTimerMs > 0) {
+                this.finishLineState.respawnTimerMs -= deltaSeconds * 1000
+            }
+
+            if (this.finishLineState.respawnTimerMs <= 0) {
+                this.finishLineState.active = true
+                this.finishLineState.enraged = this.finishLineState.wasShotThisStage
+                this.finishLineState.beamState = 'idle'
+                this.finishLineState.beamTimerMs = this.createFinishLineBeamCooldown()
+                this.placeFinishLineRandomly({ preserveEnraged: true })
+                if (this.finishLineState.enraged) {
+                    this.finishLine.classList.add('__enraged')
+                    this.showMomentToast('LEVEL MAD')
+                }
+            }
+            return
+        }
+
         this.finishLineState.directionTimerMs -= deltaSeconds * 1000
 
         if (this.finishLineState.directionTimerMs <= 0) {
@@ -1082,6 +1223,8 @@ export class Game {
 
         this.finishLineState.x = nextX
         this.finishLineState.y = nextY
+
+        this.updateFinishLineAttack(deltaSeconds)
     }
 
     updateFalsePortal(deltaSeconds) {
@@ -1148,6 +1291,12 @@ export class Game {
     }
 
     renderFinishLine() {
+        this.finishLine.hidden = !this.finishLineState.active
+
+        if (!this.finishLineState.active) {
+            return
+        }
+
         this.finishLine.style.left = `${this.finishLineState.x}px`
         this.finishLine.style.top = `${this.finishLineState.y}px`
     }
@@ -1206,6 +1355,10 @@ export class Game {
         }
     }
 
+    createFinishLineBeamCooldown() {
+        return randomInteger(this.config.finishLine.beamCooldownMinMs, this.config.finishLine.beamCooldownMaxMs)
+    }
+
     createFalsePortalVelocity() {
         const speed = randomFloat(
             this.config.finishLine.minSpeed * this.config.traps.falsePortalSpeedMultiplier,
@@ -1234,6 +1387,68 @@ export class Game {
     addFinishLineDirectionJitter() {
         this.finishLineState.velocityX += randomFloat(-1, 1) * this.config.finishLine.turnJitter * 16
         this.finishLineState.velocityY += randomFloat(-1, 1) * this.config.finishLine.turnJitter * 16
+    }
+
+    updateFinishLineAttack(deltaSeconds) {
+        if (!this.finishLineState.enraged) {
+            this.finishLine.classList.remove('__charging', '__shooting')
+            return
+        }
+
+        this.finishLineState.beamTimerMs -= deltaSeconds * 1000
+
+        if (this.finishLineState.beamState === 'idle' && this.finishLineState.beamTimerMs <= 0) {
+            const playerCenter = this.getPlayerCenter()
+            const finishLineCenterX = this.finishLineState.x + this.finishLineState.width / 2
+            const finishLineCenterY = this.finishLineState.y + this.finishLineState.height / 2
+
+            this.finishLineState.beamAngle = Math.atan2(playerCenter.y - finishLineCenterY, playerCenter.x - finishLineCenterX)
+            this.finishLineState.beamState = 'warning'
+            this.finishLineState.beamTimerMs = this.config.finishLine.beamWarningMs
+            this.finishLine.style.setProperty('--beam-angle', `${this.finishLineState.beamAngle}rad`)
+            this.finishLine.classList.add('__charging', '__enraged')
+            this.finishLine.classList.remove('__shooting')
+            return
+        }
+
+        if (this.finishLineState.beamState === 'warning' && this.finishLineState.beamTimerMs <= 0) {
+            this.finishLineState.beamState = 'firing'
+            this.finishLineState.beamTimerMs = this.config.finishLine.beamDurationMs
+            this.finishLine.classList.add('__shooting')
+            this.finishLine.classList.remove('__charging')
+        }
+
+        if (this.finishLineState.beamState !== 'firing') {
+            return
+        }
+
+        const beamDistance = this.getFinishLineBeamDistance(this.player.getPosition())
+
+        if (!this.state.safed && !this.state.isInvincible() && beamDistance <= this.player.getPosition().collisionRadius) {
+            this.finishLine.classList.remove('__charging', '__shooting')
+            this.finishLineState.beamState = 'idle'
+            this.finishLineState.beamTimerMs = this.createFinishLineBeamCooldown()
+            this.handleVillainCollision('O Level UP voltou furioso e te acertou com um raio. Aperte Enter e tente de novo.')
+            return
+        }
+
+        if (this.finishLineState.beamTimerMs <= 0) {
+            this.finishLine.classList.remove('__charging', '__shooting')
+            this.finishLineState.beamState = 'idle'
+            this.finishLineState.beamTimerMs = this.createFinishLineBeamCooldown()
+        }
+    }
+
+    getFinishLineBeamDistance(playerPosition) {
+        const beamLength = Math.hypot(this.worldSize.width, this.worldSize.height)
+        const startX = this.finishLineState.x + this.finishLineState.width / 2
+        const startY = this.finishLineState.y + this.finishLineState.height / 2
+        const endX = startX + Math.cos(this.finishLineState.beamAngle) * beamLength
+        const endY = startY + Math.sin(this.finishLineState.beamAngle) * beamLength
+        const playerCenterX = playerPosition.x + playerPosition.width / 2
+        const playerCenterY = playerPosition.y + playerPosition.height / 2
+
+        return pointToSegmentDistance(playerCenterX, playerCenterY, startX, startY, endX, endY)
     }
 
     randomizeFalsePortalDirection() {
@@ -1325,55 +1540,19 @@ export class Game {
         return {
             variant: 'neutral',
             eyebrow: 'Deep Space Run',
-            title: 'Como jogar',
-            description: 'Desvie do caos, derrube planetas hostis, encontre o Level UP verdadeiro e suba no ranking local.',
-            sections: [
-                {
-                    title: 'Controles',
-                    items: this.isTouchDevice
-                        ? [
-                            { label: 'Teclado', value: 'WASD move a nave, setas miram, Espaço atira e Shift usa o cometa.' },
-                            { label: 'Joystick', value: 'Stick esquerdo move, direito mira, R2 atira, R1 usa cometa, L2 acelera, L1 desacelera e Start pausa.' }
-                        ]
-                        : [
-                            { label: 'Teclado', value: 'WASD move a nave, setas miram, Espaço atira e Shift usa o cometa.' },
-                            { label: 'Joystick', value: 'Stick esquerdo move, direito mira, R2 atira, R1 usa cometa, L2 acelera, L1 desacelera e Start pausa.' }
-                        ]
-                },
-                {
-                    title: 'Ameaças',
-                    items: [
-                        { label: 'Vilões', value: 'Planetas hostis te matam no toque e alguns disparam raios com aviso antes do tiro.' },
-                        { label: 'Raridades', value: 'Covardes fogem, ricochetes aceleram nas bordas, suicidas mergulham na nave, snipers telegrafam mais forte e blockers fecham rota.' },
-                        { label: 'Armadilha', value: 'Nem todo portal brilhante é o Level UP. O portal falso pune greed.' }
-                    ]
-                },
-                {
-                    title: 'Vida e disparos',
-                    items: [
-                        { label: 'Lives', value: 'Você começa com 3 vidas. Coração só aparece em fases mais altas e quando a situação aperta.' },
-                        { label: 'Laser', value: 'O tiro normal é ilimitado e derruba o planeta em 4 hits.' },
-                        { label: 'Cometa', value: 'O pickup de espada agora vale cometas. Cada cometa é um tiro especial que mata em um único acerto.' },
-                        { label: 'Star', value: 'A estrela te deixa invulnerável por alguns segundos e permite estourar planetas encostando neles.' }
-                    ]
-                },
-                {
-                    title: 'Score e ranking',
-                    items: [
-                        { label: 'Pontos', value: 'Cada hit de laser vale 10 pontos multiplicados pelo nível atual.' },
-                        { label: 'Combo', value: 'A partir de combo x5, cada hit passa a multiplicar pelo tamanho do combo.' },
-                        { label: 'Ranking local', value: 'O top 5 fica salvo no navegador. Chegar mais longe pesa muito no score final.' }
-                    ]
-                }
-            ],
+            title: 'Prepare a nave',
+            description: 'Runs curtas, score alto e caos espacial. Configure o input, abra o tutorial se precisar e entra na arena.',
             leaderboard: this.leaderboard.map((entry, index) => ({
                 position: index + 1,
                 score: entry.score,
                 level: entry.level
             })),
             hint: this.isTouchDevice
-                ? 'Projeto desktop-first: teclado funciona melhor. WASD move, setas miram, espaço atira e Shift solta o cometa.'
-                : 'Ajuste o input no painel abaixo e aperte Enter ou o botão começar para iniciar a run.'
+                ? 'Projeto desktop-first. Use o tutorial para ver os controles completos.'
+                : 'Ajuste o input no painel abaixo e aperte Enter ou o botão começar para iniciar a run.',
+            actions: [
+                { label: 'Tutorial', kind: 'secondary', onClick: () => this.openTutorial() }
+            ]
         }
     }
 
@@ -1395,4 +1574,20 @@ function randomInteger(min, max) {
 
 function randomFloat(min, max) {
     return Math.random() * (max - min) + min
+}
+
+function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
+    const dx = x2 - x1
+    const dy = y2 - y1
+    const denominator = dx * dx + dy * dy
+
+    if (denominator === 0) {
+        return Math.hypot(px - x1, py - y1)
+    }
+
+    const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / denominator))
+    const nearestX = x1 + t * dx
+    const nearestY = y1 + t * dy
+
+    return Math.hypot(px - nearestX, py - nearestY)
 }

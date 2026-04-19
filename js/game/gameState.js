@@ -55,6 +55,15 @@ export class GameState {
         return this.score
     }
 
+    applyScorePenaltyDivisor(divisor = 1) {
+        if (divisor <= 1) {
+            return this.score
+        }
+
+        this.score = Math.max(0, Math.floor(this.score / divisor))
+        return this.score
+    }
+
     activateInvincibility(durationMs) {
         this.invincibilityRemainingMs = Math.max(this.invincibilityRemainingMs, durationMs)
     }

@@ -343,6 +343,118 @@ body {
         }
     }
 
+    .__tutorialModal {
+        position: fixed;
+        inset: 0;
+        z-index: 4100;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+
+        &.__visible {
+            display: flex;
+        }
+
+        .__tutorialBackdrop {
+            position: absolute;
+            inset: 0;
+            background: rgba(2, 6, 17, 0.78);
+            backdrop-filter: blur(6px);
+        }
+
+        .__tutorialPanel {
+            position: relative;
+            width: min(460px, calc(100vw - 28px));
+            border-radius: 18px;
+            border: 1px solid var(--panel-border);
+            background: linear-gradient(180deg, rgba(7, 12, 24, 0.94), rgba(7, 12, 24, 0.82));
+            box-shadow: var(--panel-shadow);
+            padding: 18px;
+        }
+
+        .__tutorialHeader {
+            display: grid;
+            gap: 6px;
+        }
+
+        .__tutorialEyebrow {
+            color: var(--accent);
+            font-size: 9px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .__tutorialTitle {
+            font-size: 18px;
+            line-height: 1.15;
+        }
+
+        .__tutorialTabs {
+            display: flex;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .__tutorialTab,
+        .__tutorialAction {
+            font: inherit;
+            cursor: pointer;
+        }
+
+        .__tutorialTab {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-soft);
+        }
+
+        .__tutorialTab.__active {
+            color: #07101f;
+            background: linear-gradient(90deg, rgba(112, 240, 255, 0.96), rgba(156, 255, 172, 0.92));
+        }
+
+        .__tutorialDescription {
+            margin: 16px 0 0;
+            color: var(--text-main);
+            line-height: 1.55;
+            font-size: 13px;
+        }
+
+        .__tutorialDetails {
+            display: grid;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .__tutorialDetail {
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-soft);
+            font-size: 11px;
+            line-height: 1.45;
+        }
+
+        .__tutorialActions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 16px;
+        }
+
+        .__tutorialAction {
+            min-height: 36px;
+            padding: 0 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+        }
+    }
+
     .__hud {
         position: fixed;
         top: 10px;
@@ -790,6 +902,7 @@ body {
         }
 
         .__finishLine {
+            --beam-angle: 0rad;
             position: absolute;
             display: flex;
             align-items: center;
@@ -844,6 +957,76 @@ body {
             span,
             & {
                 padding-top: 1px;
+            }
+
+            &.__enraged {
+                box-shadow:
+                    0 0 20px rgba(255, 84, 84, 0.7),
+                    0 0 40px rgba(255, 84, 84, 0.32),
+                    inset 0 0 18px rgba(255, 255, 255, 0.18);
+            }
+
+            &.__charging,
+            &.__shooting {
+                overflow: visible;
+
+                span,
+                & {
+                    &::before,
+                    &::after {
+                        pointer-events: none;
+                    }
+                }
+            }
+
+            &.__charging::before {
+                inset: auto;
+                left: 50%;
+                top: 50%;
+                width: 100vw;
+                height: 3px;
+                border: 0;
+                border-radius: 999px;
+                opacity: 0.82;
+                transform-origin: left center;
+                transform: translateY(-50%) rotate(var(--beam-angle));
+                background: linear-gradient(90deg, rgba(255, 190, 190, 0.16), rgba(255, 112, 112, 0.84), rgba(255, 112, 112, 0));
+                box-shadow: 0 0 14px rgba(255, 112, 112, 0.34);
+                animation: none;
+            }
+
+            &.__charging::after {
+                inset: auto;
+                left: 50%;
+                top: 50%;
+                width: 16px;
+                height: 16px;
+                border: 0;
+                border-radius: 50%;
+                transform: translate(-50%, -50%);
+                background: radial-gradient(circle, rgba(255, 246, 246, 0.98), rgba(255, 102, 102, 0.24) 72%, rgba(255, 102, 102, 0));
+                animation: shooterWarningPulse 300ms ease-in-out infinite;
+            }
+
+            &.__shooting::before {
+                inset: auto;
+                left: 50%;
+                top: 50%;
+                width: 120vw;
+                height: 5px;
+                border: 0;
+                border-radius: 999px;
+                transform-origin: left center;
+                transform: translateY(-50%) rotate(var(--beam-angle));
+                background: linear-gradient(90deg, rgba(255, 240, 240, 0.12), rgba(255, 84, 84, 0.98) 14%, rgba(255, 245, 179, 0.94) 48%, rgba(255, 84, 84, 0.98) 82%, rgba(255, 84, 84, 0));
+                box-shadow:
+                    0 0 14px rgba(255, 84, 84, 0.84),
+                    0 0 28px rgba(255, 168, 102, 0.34);
+                animation: enemyBeamFire 420ms ease-out forwards;
+            }
+
+            &.__shooting::after {
+                display: none;
             }
 
             &.__falsePortal {
@@ -1132,6 +1315,23 @@ body {
 
             .__overlayActions {
                 flex-direction: column;
+            }
+        }
+
+        .__tutorialModal {
+            padding: 12px;
+
+            .__tutorialPanel {
+                padding: 14px;
+            }
+
+            .__tutorialTitle {
+                font-size: 16px;
+            }
+
+            .__tutorialTab {
+                width: 30px;
+                height: 30px;
             }
         }
     }
