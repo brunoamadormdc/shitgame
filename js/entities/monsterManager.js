@@ -1,18 +1,19 @@
 export class MonsterManager {
-    constructor({ document, container, config, onVillainCollision, onBonusCollision, onStarCollision }) {
+    constructor({ document, container, config, onVillainCollision, onBonusCollision, onStarCollision, onHeartCollision }) {
         this.document = document
         this.container = container
         this.config = config
         this.onVillainCollision = onVillainCollision
         this.onBonusCollision = onBonusCollision
         this.onStarCollision = onStarCollision
+        this.onHeartCollision = onHeartCollision
         this.activeLevelConfig = null
         this.monsters = []
         this.pendingRespawns = []
         this.resetBaseSize()
     }
 
-    spawnLevel(levelConfig) {
+    spawnLevel(levelConfig, options = {}) {
         this.removeAll()
         this.activeLevelConfig = levelConfig
 
@@ -24,8 +25,12 @@ export class MonsterManager {
             this.spawnGoodMonster(levelConfig)
         }
 
-        if (Math.random() < this.config.monsters.starSpawnChance) {
+        if (levelConfig.guaranteedStarPickup || Math.random() < this.config.monsters.starSpawnChance) {
             this.spawnStarPickup(levelConfig)
+        }
+
+        if (options.spawnHeartPickup) {
+            this.spawnHeartPickup(levelConfig)
         }
     }
 
@@ -126,6 +131,33 @@ export class MonsterManager {
         })
     }
 
+    spawnHeartPickup(levelConfig) {
+        const { posX, posY } = this.calculatePositions()
+        const size = this.config.monsters.heartPickupSize
+        const monster = this.createMonsterElement(posX, posY, size, size)
+        const velocity = this.createVelocity(levelConfig, 0.8)
+        const texture = createHeartTexture(this.document, size)
+
+        monster.classList.add('heartPickup')
+        monster.style.backgroundImage = `url('${texture}')`
+        this.container.append(monster)
+        this.monsters.push({
+            element: monster,
+            type: 'heartPickup',
+            x: posX,
+            y: posY,
+            width: size,
+            height: size,
+            collisionRadius: size * 0.46 + this.config.monsters.collisionPadding,
+            velocityX: velocity.x,
+            velocityY: velocity.y,
+            directionTimerMs: randomInteger(
+                this.config.monsters.directionChangeMinMs,
+                this.config.monsters.directionChangeMaxMs
+            )
+        })
+    }
+
     createMonsterElement(posX, posY, width, height) {
         const monster = this.document.createElement('div')
 
@@ -174,6 +206,11 @@ export class MonsterManager {
 
             if (monster.type === 'powerStar') {
                 this.onStarCollision()
+                return
+            }
+
+            if (monster.type === 'heartPickup') {
+                this.onHeartCollision()
                 return
             }
 
@@ -605,6 +642,44 @@ function createStarTexture(document, size) {
     context.beginPath()
     context.arc(center - dimension * 0.1, center - dimension * 0.06, dimension * 0.04, 0, Math.PI * 2)
     context.stroke()
+
+    return canvas.toDataURL('image/png')
+}
+
+function createHeartTexture(document, size) {
+    const canvas = document.createElement('canvas')
+    const dimension = Math.max(32, Math.round(size))
+    const context = canvas.getContext('2d')
+    const top = dimension * 0.3
+    const left = dimension * 0.22
+    const right = dimension * 0.78
+    const bottom = dimension * 0.82
+
+    canvas.width = dimension
+    canvas.height = dimension
+
+    const gradient = context.createLinearGradient(0, top, 0, bottom)
+    gradient.addColorStop(0, '#ffd5dc')
+    gradient.addColorStop(0.45, '#ff6f8d')
+    gradient.addColorStop(1, '#cb234b')
+
+    context.fillStyle = gradient
+    context.beginPath()
+    context.moveTo(dimension / 2, bottom)
+    context.bezierCurveTo(dimension * 0.08, dimension * 0.62, dimension * 0.08, top, left, top)
+    context.arc(left + dimension * 0.1, top, dimension * 0.12, Math.PI, 0, false)
+    context.arc(right - dimension * 0.1, top, dimension * 0.12, Math.PI, 0, false)
+    context.bezierCurveTo(dimension * 0.92, top, dimension * 0.92, dimension * 0.62, dimension / 2, bottom)
+    context.closePath()
+    context.shadowColor = 'rgba(255, 114, 153, 0.55)'
+    context.shadowBlur = Math.max(8, dimension * 0.16)
+    context.fill()
+
+    context.shadowBlur = 0
+    context.fillStyle = 'rgba(255,255,255,0.32)'
+    context.beginPath()
+    context.ellipse(dimension * 0.4, dimension * 0.34, dimension * 0.09, dimension * 0.05, -0.35, 0, Math.PI * 2)
+    context.fill()
 
     return canvas.toDataURL('image/png')
 }

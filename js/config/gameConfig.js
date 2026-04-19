@@ -8,21 +8,30 @@ function buildLevelDefinition(level) {
         goodMonsterCount: Math.floor(completedLevels / 3),
         sizeMultiplier: Math.min(1 + (safeLevel - 1) * 0.08, 2),
         animationDurationMultiplier: Math.max(0.45, 1 - (safeLevel - 1) * 0.05),
-        shooterEnabled: safeLevel >= 7,
-        shooterFraction: safeLevel >= 7 ? 1 / 3 : 0,
+        shooterEnabled: true,
+        shooterFraction: buildShooterFraction(safeLevel),
         respawnEnabled: safeLevel >= 7,
-        villainHitPoints: safeLevel > 12 ? 3 : 1
+        villainHitPoints: safeLevel >= 7 ? 3 : 1,
+        guaranteedStarPickup: safeLevel >= 7
     }
 }
 
 function buildVillainCount(level) {
-    const completedLevels = Math.max(0, level - 1)
+    if (level <= 1) return 4
+    if (level === 2) return 7
+    if (level === 3) return 10
+    if (level === 4) return 13
+    if (level === 5) return 16
+    if (level === 6) return 20
+    return 24 + (level - 7) * 5
+}
 
-    if (level < 7) {
-        return completedLevels * completedLevels
+function buildShooterFraction(level) {
+    if (level >= 7) {
+        return 1 / 3
     }
 
-    return 30 + (level - 7) * 5
+    return Math.min(0.14 + (level - 1) * 0.03, 0.29)
 }
 
 export const GAME_CONFIG = {
@@ -47,6 +56,7 @@ export const GAME_CONFIG = {
     },
     player: {
         initialLives: 3,
+        maxLives: 3,
         initialHammers: 10,
         initialMovePower: 180,
         minMovePower: 120,
@@ -62,6 +72,7 @@ export const GAME_CONFIG = {
         initialSizeRatio: 0.044,
         goodMonsterSize: 60,
         starPickupSize: 48,
+        heartPickupSize: 44,
         starSpawnChance: 0.28,
         minSizeMultiplier: 0.7,
         maxSizeMultiplier: 1.35,

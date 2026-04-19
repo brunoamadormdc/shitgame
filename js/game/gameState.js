@@ -18,6 +18,8 @@ export class GameState {
         this.hammers = this.config.player.initialHammers
         this.movePower = this.config.player.initialMovePower
         this.invincibilityRemainingMs = 0
+        this.nextHeartPickupLevel = 8
+        this.pauseReason = null
         this.safed = true
         this.currentLevel = 1
         this.currentLevelConfig = this.config.progression.getLevel(this.currentLevel)
@@ -68,18 +70,33 @@ export class GameState {
         return this.lives
     }
 
+    gainLife(amount = 1) {
+        this.lives = Math.min(this.config.player.maxLives, this.lives + amount)
+        return this.lives
+    }
+
+    shouldSpawnHeartPickup() {
+        return this.lives === 1 && this.currentLevel >= this.nextHeartPickupLevel
+    }
+
+    consumeHeartPickupWindow() {
+        this.nextHeartPickupLevel += randomStageGap()
+    }
+
     markLevelPrepared(value) {
         this.levelPrepared = value
     }
 
     startPlaying() {
         this.status = GAME_STATES.PLAYING
+        this.pauseReason = null
     }
 
-    pause(message) {
+    pause(message, reason = 'system') {
         this.clearInvincibility()
         this.status = GAME_STATES.PAUSED
         this.message = message
+        this.pauseReason = reason
     }
 
     completeLevel() {
@@ -108,14 +125,22 @@ export class GameState {
     restartCurrentLevel(message) {
         this.currentLevelConfig = this.config.progression.getLevel(this.currentLevel)
         this.levelPrepared = false
-        this.pause(message)
+        this.pause(message, 'collision')
     }
 
     canPlay() {
         return this.status === GAME_STATES.PLAYING
     }
 
+    isManualPaused() {
+        return this.status === GAME_STATES.PAUSED && this.pauseReason === 'manual'
+    }
+
     shouldStartFreshGame() {
         return this.status === GAME_STATES.GAME_OVER
     }
+}
+
+function randomStageGap() {
+    return Math.random() < 0.5 ? 3 : 4
 }

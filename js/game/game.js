@@ -37,7 +37,8 @@ export class Game {
             config: this.config,
             onVillainCollision: () => this.handleVillainCollision(),
             onBonusCollision: () => this.handleBonusCollision(),
-            onStarCollision: () => this.handleStarCollision()
+            onStarCollision: () => this.handleStarCollision(),
+            onHeartCollision: () => this.handleHeartCollision()
         })
         this.keyState = {
             ArrowRight: false,
@@ -131,7 +132,7 @@ export class Game {
         }
 
         if (e.key === 'Enter') {
-            this.startGame()
+            this.handlePauseInput()
             return
         }
 
@@ -208,7 +209,12 @@ export class Game {
     }
 
     prepareCurrentLevel() {
-        this.monsters.spawnLevel(this.state.currentLevelConfig)
+        const spawnHeartPickup = this.state.shouldSpawnHeartPickup()
+
+        this.monsters.spawnLevel(this.state.currentLevelConfig, { spawnHeartPickup })
+        if (spawnHeartPickup) {
+            this.state.consumeHeartPickupWindow()
+        }
         this.placeFinishLineRandomly()
         this.state.markLevelPrepared(true)
         this.calculateFinishLine()
@@ -228,11 +234,12 @@ export class Game {
         this.lastFrameTime = timestamp
         const gamepadSnapshot = this.pollGamepad()
 
+        if (gamepadSnapshot.startPressed) {
+            this.handlePauseInput()
+        }
+
         if (this.state.canPlay()) {
             this.update(deltaTime, gamepadSnapshot)
-        }
-        else if (gamepadSnapshot.startPressed) {
-            this.startGame()
         }
 
         this.render()
@@ -312,6 +319,12 @@ export class Game {
         this.triggerFeedback('bonus')
     }
 
+    handleHeartCollision() {
+        this.state.gainLife(1)
+        this.renderHud()
+        this.triggerFeedback('bonus')
+    }
+
     handleVillainCollision() {
         const reachedLevel = this.state.points
         const remainingLives = this.state.loseLife()
@@ -330,6 +343,37 @@ export class Game {
         this.renderHud()
         this.triggerFeedback('collision')
         this.showOverlay(this.state.message)
+    }
+
+    handlePauseInput() {
+        if (this.state.canPlay()) {
+            this.pauseGame()
+            return
+        }
+
+        if (this.state.isManualPaused()) {
+            this.resumeGame()
+            return
+        }
+
+        this.startGame()
+    }
+
+    pauseGame() {
+        this.state.pause('Jogo pausado. Pressione Enter ou Start para continuar.', 'manual')
+        this.resetKeyState()
+        this.messages.show({
+            variant: 'warning',
+            eyebrow: 'Paused',
+            title: 'Pausa',
+            description: 'A nave ficou em espera. O mapa e os inimigos estão congelados.',
+            hint: 'Pressione Enter ou Start para despausar.'
+        })
+    }
+
+    resumeGame() {
+        this.state.startPlaying()
+        this.messages.hide()
     }
 
     resetKeyState() {
@@ -430,7 +474,7 @@ export class Game {
         if (gamepad.buttons[12]?.pressed) y = -1
         if (gamepad.buttons[13]?.pressed) y = 1
 
-        const startDown = Boolean(gamepad.buttons[9]?.pressed || gamepad.buttons[0]?.pressed)
+        const startDown = Boolean(gamepad.buttons[9]?.pressed)
         const attackDown = Boolean(gamepad.buttons[0]?.pressed)
         const speedUpDown = Boolean(gamepad.buttons[5]?.pressed)
         const speedDownDown = Boolean(gamepad.buttons[4]?.pressed)

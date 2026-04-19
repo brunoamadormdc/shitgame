@@ -310,6 +310,10 @@ body .container .__monsters.powerStar {
   filter: drop-shadow(0 0 16px rgba(255, 223, 107, 0.78));
   animation: powerStarPulse 760ms ease-in-out infinite;
 }
+body .container .__monsters.heartPickup {
+  filter: drop-shadow(0 0 16px rgba(255, 116, 158, 0.68));
+  animation: heartPickupPulse 860ms ease-in-out infinite;
+}
 body .container .__monsters.__shooter {
   box-shadow: inset 0 0 0 1px rgba(255, 222, 173, 0.2);
 }
@@ -552,6 +556,17 @@ body .container .__finishLine {
   }
   100% {
     opacity: 0.92;
+  }
+}
+@keyframes heartPickupPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 @media (max-width: 720px) {
