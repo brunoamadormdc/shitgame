@@ -1325,11 +1325,55 @@ export class Game {
         return {
             variant: 'neutral',
             eyebrow: 'Deep Space Run',
-            title: 'Prepare a nave',
-            description: this.state.message,
+            title: 'Como jogar',
+            description: 'Desvie do caos, derrube planetas hostis, encontre o Level UP verdadeiro e suba no ranking local.',
+            sections: [
+                {
+                    title: 'Controles',
+                    items: this.isTouchDevice
+                        ? [
+                            { label: 'Teclado', value: 'WASD move a nave, setas miram, Espaço atira e Shift usa o cometa.' },
+                            { label: 'Joystick', value: 'Stick esquerdo move, direito mira, R2 atira, R1 usa cometa, L2 acelera, L1 desacelera e Start pausa.' }
+                        ]
+                        : [
+                            { label: 'Teclado', value: 'WASD move a nave, setas miram, Espaço atira e Shift usa o cometa.' },
+                            { label: 'Joystick', value: 'Stick esquerdo move, direito mira, R2 atira, R1 usa cometa, L2 acelera, L1 desacelera e Start pausa.' }
+                        ]
+                },
+                {
+                    title: 'Ameaças',
+                    items: [
+                        { label: 'Vilões', value: 'Planetas hostis te matam no toque e alguns disparam raios com aviso antes do tiro.' },
+                        { label: 'Raridades', value: 'Covardes fogem, ricochetes aceleram nas bordas, suicidas mergulham na nave, snipers telegrafam mais forte e blockers fecham rota.' },
+                        { label: 'Armadilha', value: 'Nem todo portal brilhante é o Level UP. O portal falso pune greed.' }
+                    ]
+                },
+                {
+                    title: 'Vida e disparos',
+                    items: [
+                        { label: 'Lives', value: 'Você começa com 3 vidas. Coração só aparece em fases mais altas e quando a situação aperta.' },
+                        { label: 'Laser', value: 'O tiro normal é ilimitado e derruba o planeta em 4 hits.' },
+                        { label: 'Cometa', value: 'O pickup de espada agora vale cometas. Cada cometa é um tiro especial que mata em um único acerto.' },
+                        { label: 'Star', value: 'A estrela te deixa invulnerável por alguns segundos e permite estourar planetas encostando neles.' }
+                    ]
+                },
+                {
+                    title: 'Score e ranking',
+                    items: [
+                        { label: 'Pontos', value: 'Cada hit de laser vale 10 pontos multiplicados pelo nível atual.' },
+                        { label: 'Combo', value: 'A partir de combo x5, cada hit passa a multiplicar pelo tamanho do combo.' },
+                        { label: 'Ranking local', value: 'O top 5 fica salvo no navegador. Chegar mais longe pesa muito no score final.' }
+                    ]
+                }
+            ],
+            leaderboard: this.leaderboard.map((entry, index) => ({
+                position: index + 1,
+                score: entry.score,
+                level: entry.level
+            })),
             hint: this.isTouchDevice
                 ? 'Projeto desktop-first: teclado funciona melhor. WASD move, setas miram, espaço atira e Shift solta o cometa.'
-                : 'WASD move, setas miram, espaço atira, Shift usa cometa, + e - ajustam velocidade. No joystick: stick esquerdo move, direito mira, R2 atira, R1 usa cometa, L2 aumenta velocidade, L1 reduz velocidade, Start pausa.'
+                : 'Ajuste o input no painel abaixo e aperte Enter ou o botão começar para iniciar a run.'
         }
     }
 

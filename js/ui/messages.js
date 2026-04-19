@@ -4,7 +4,7 @@ export class Messages {
         this.body = document.querySelector('body')
     }
 
-    show({ variant = 'neutral', eyebrow = 'Status', title, description, hint, stats = [], leaderboard = [], actions = [] }) {
+    show({ variant = 'neutral', eyebrow = 'Status', title, description, hint, stats = [], sections = [], leaderboard = [], actions = [] }) {
         let overlay = this.document.querySelector('.__overlay')
 
         if (!overlay) {
@@ -20,6 +20,7 @@ export class Messages {
                     <h1 class="__overlayTitle"></h1>
                     <p class="__overlayDescription"></p>
                     <div class="__overlayStats"></div>
+                    <div class="__overlaySections"></div>
                     <div class="__overlayLeaderboard"></div>
                     <p class="__overlayHint"></p>
                     <div class="__overlayActions"></div>
@@ -35,10 +36,38 @@ export class Messages {
         overlay.querySelector('.__overlayHint').textContent = hint
         overlay.setAttribute('aria-label', title)
         this.renderStats(overlay.querySelector('.__overlayStats'), stats)
+        this.renderSections(overlay.querySelector('.__overlaySections'), sections)
         this.renderLeaderboard(overlay.querySelector('.__overlayLeaderboard'), leaderboard)
         this.renderActions(overlay.querySelector('.__overlayActions'), actions)
 
         return overlay
+    }
+
+    renderSections(root, sections) {
+        if (!root) {
+            return
+        }
+
+        if (!sections.length) {
+            root.innerHTML = ''
+            root.hidden = true
+            return
+        }
+
+        root.hidden = false
+        root.innerHTML = sections.map(({ title, items = [] }) => `
+            <section class="__overlaySection">
+                <span class="__overlaySectionTitle">${title}</span>
+                <div class="__overlaySectionItems">
+                    ${items.map(({ label, value }) => `
+                        <div class="__overlaySectionItem">
+                            <strong>${label}</strong>
+                            <span>${value}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </section>
+        `).join('')
     }
 
     renderStats(root, stats) {

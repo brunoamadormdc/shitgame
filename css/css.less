@@ -148,6 +148,41 @@ body {
             margin-top: 18px;
         }
 
+        .__overlaySections {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .__overlaySection {
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .__overlaySectionItems {
+            display: grid;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .__overlaySectionItem {
+            display: grid;
+            gap: 3px;
+            color: var(--text-soft);
+            font-size: 11px;
+            line-height: 1.45;
+
+            strong {
+                color: var(--text-main);
+                font-size: 10px;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+            }
+        }
+
         .__overlayRankList {
             margin: 10px 0 0;
             padding: 0;
@@ -1088,6 +1123,10 @@ body {
             }
 
             .__overlayStats {
+                grid-template-columns: 1fr;
+            }
+
+            .__overlaySections {
                 grid-template-columns: 1fr;
             }
 
