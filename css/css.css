@@ -615,6 +615,9 @@ body .container .__safeZone {
 }
 body .container .__player {
   --aim-angle: 0rad;
+  --x: 0px;
+  --y: 0px;
+  --entity-scale: 1;
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -627,7 +630,9 @@ body .container .__player {
   background-size: 30px 30px;
   cursor: pointer;
   opacity: 0.56;
+  transform: translate3d(var(--x), var(--y), 0) scale(var(--entity-scale));
   transition: opacity 200ms ease, transform 200ms ease, filter 200ms ease;
+  will-change: transform;
 }
 body .container .__player::after {
   content: '';
@@ -649,7 +654,7 @@ body .container .__player.__safe {
 }
 body .container .__player.__notSafe {
   opacity: 1;
-  transform: scale(1.04);
+  --entity-scale: 1.04;
   filter: drop-shadow(0 0 16px rgba(255, 200, 87, 0.48));
 }
 body .container .__player.__invincible {
@@ -659,6 +664,9 @@ body .container .__player.__invincible {
 body .container .__monsters {
   --beam-angle: 0rad;
   --enemy-beam-length: 100vw;
+  --x: 0px;
+  --y: 0px;
+  --entity-scale: 1;
   border: 1px solid rgba(212, 184, 184, 0);
   background-repeat: no-repeat;
   background-size: cover;
@@ -667,6 +675,8 @@ body .container .__monsters {
   box-sizing: border-box;
   animation: move 10s ease infinite;
   filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.28));
+  transform: translate3d(var(--x), var(--y), 0) scale(var(--entity-scale));
+  will-change: transform;
 }
 body .container .__monsters.goodMonster {
   border-radius: 20%;
@@ -763,7 +773,7 @@ body .container .__monsters.__shooting::after {
 }
 body .container .__monsters.__destruction {
   opacity: 0.18;
-  transform: scale(1.14);
+  --entity-scale: 1.14;
   filter: brightness(1.75) saturate(1.45) drop-shadow(0 0 18px rgba(255, 112, 193, 0.48));
 }
 body .container .__monsters[data-damage='1'] {
@@ -971,6 +981,52 @@ body .container .__finishLine.__falsePortal::after {
   border-color: rgba(216, 117, 255, 0.42);
   box-shadow: 0 0 16px rgba(216, 117, 255, 0.32), inset 0 0 10px rgba(216, 117, 255, 0.16);
   animation-duration: 0.82s;
+}
+@media (pointer: coarse), (max-width: 900px) {
+  body .container .__player {
+    transition: opacity 160ms ease, transform 160ms ease;
+  }
+  body .container .__player::after {
+    box-shadow: none;
+  }
+  body .container .__player.__safe,
+  body .container .__player.__notSafe,
+  body .container .__player.__invincible {
+    filter: none;
+  }
+  body .container .__monsters {
+    animation: none;
+    filter: none;
+  }
+  body .container .__monsters.goodMonster,
+  body .container .__monsters.powerStar,
+  body .container .__monsters.heartPickup,
+  body .container .__monsters.__charging,
+  body .container .__monsters.__charging.__sniper,
+  body .container .__monsters.__blocker,
+  body .container .__monsters.__destruction,
+  body .container .__monsters[data-damage='1'],
+  body .container .__monsters[data-damage='2'],
+  body .container .__monsters[data-damage='3'] {
+    filter: none !important;
+  }
+  body .container .__monsters.__shooter,
+  body .container .__monsters.__coward,
+  body .container .__monsters.__ricochet,
+  body .container .__monsters.__suicide,
+  body .container .__monsters.__sniper,
+  body .container .__monsters.__blocker {
+    box-shadow: none;
+  }
+  body .container .__monsters.powerStar,
+  body .container .__monsters.heartPickup,
+  body .container .__monsters.__suicide,
+  body .container .__finishLine,
+  body .container .__finishLine::before,
+  body .container .__finishLine::after,
+  body .container .__finishLine.__falsePortal {
+    animation: none;
+  }
 }
 @keyframes screenCollision {
   0% {

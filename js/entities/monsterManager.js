@@ -186,8 +186,8 @@ export class MonsterManager {
         monster.classList.add('__monsters')
         monster.style.width = `${width}px`
         monster.style.height = `${height}px`
-        monster.style.top = `${posY}px`
-        monster.style.left = `${posX}px`
+        monster.style.setProperty('--x', `${posX}px`)
+        monster.style.setProperty('--y', `${posY}px`)
 
         return monster
     }
@@ -480,8 +480,8 @@ export class MonsterManager {
 
         monster.x = nextX
         monster.y = nextY
-        element.style.left = `${nextX}px`
-        element.style.top = `${nextY}px`
+        element.style.setProperty('--x', `${nextX}px`)
+        element.style.setProperty('--y', `${nextY}px`)
     }
 
     createVelocity(levelConfig, speedScale = 1) {
@@ -791,10 +791,18 @@ function pickRandom(items) {
 }
 
 function createPlanetTexture(document, size) {
-    const canvas = document.createElement('canvas')
     const dimension = Math.max(32, Math.round(size))
+    const paletteIndex = randomInteger(0, PALETTES.length)
+    const cacheKey = `${dimension}:${paletteIndex}`
+    const cachedTexture = PLANET_TEXTURE_CACHE.get(cacheKey)
+
+    if (cachedTexture) {
+        return cachedTexture
+    }
+
+    const canvas = document.createElement('canvas')
     const context = canvas.getContext('2d')
-    const palette = pickRandom(PALETTES)
+    const palette = PALETTES[paletteIndex]
     const center = dimension / 2
     const radius = dimension * 0.48
 
@@ -848,12 +856,20 @@ function createPlanetTexture(document, size) {
     context.arc(center, center, radius - context.lineWidth, 0, Math.PI * 2)
     context.stroke()
 
-    return canvas.toDataURL('image/png')
+    const texture = canvas.toDataURL('image/png')
+    PLANET_TEXTURE_CACHE.set(cacheKey, texture)
+    return texture
 }
 
 function createStarTexture(document, size) {
-    const canvas = document.createElement('canvas')
     const dimension = Math.max(36, Math.round(size))
+    const cachedTexture = STAR_TEXTURE_CACHE.get(dimension)
+
+    if (cachedTexture) {
+        return cachedTexture
+    }
+
+    const canvas = document.createElement('canvas')
     const context = canvas.getContext('2d')
     const center = dimension / 2
     const outerRadius = dimension * 0.42
@@ -893,12 +909,20 @@ function createStarTexture(document, size) {
     context.arc(center - dimension * 0.1, center - dimension * 0.06, dimension * 0.04, 0, Math.PI * 2)
     context.stroke()
 
-    return canvas.toDataURL('image/png')
+    const texture = canvas.toDataURL('image/png')
+    STAR_TEXTURE_CACHE.set(dimension, texture)
+    return texture
 }
 
 function createHeartTexture(document, size) {
-    const canvas = document.createElement('canvas')
     const dimension = Math.max(32, Math.round(size))
+    const cachedTexture = HEART_TEXTURE_CACHE.get(dimension)
+
+    if (cachedTexture) {
+        return cachedTexture
+    }
+
+    const canvas = document.createElement('canvas')
     const context = canvas.getContext('2d')
     const top = dimension * 0.3
     const left = dimension * 0.22
@@ -931,8 +955,14 @@ function createHeartTexture(document, size) {
     context.ellipse(dimension * 0.4, dimension * 0.34, dimension * 0.09, dimension * 0.05, -0.35, 0, Math.PI * 2)
     context.fill()
 
-    return canvas.toDataURL('image/png')
+    const texture = canvas.toDataURL('image/png')
+    HEART_TEXTURE_CACHE.set(dimension, texture)
+    return texture
 }
+
+const PLANET_TEXTURE_CACHE = new Map()
+const STAR_TEXTURE_CACHE = new Map()
+const HEART_TEXTURE_CACHE = new Map()
 
 const PALETTES = [
     {

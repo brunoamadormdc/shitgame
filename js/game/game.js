@@ -98,8 +98,10 @@ export class Game {
             speedUp: false,
             speedDown: false
         }
+        this.resizeTimeoutId = null
 
         this.handleResize = this.handleResize.bind(this)
+        this.performResize = this.performResize.bind(this)
         this.handleKeyDown = this.handleKeyDown.bind(this)
         this.handleKeyUp = this.handleKeyUp.bind(this)
         this.handleGamepadConnection = this.handleGamepadConnection.bind(this)
@@ -133,6 +135,11 @@ export class Game {
     }
 
     handleResize() {
+        window.clearTimeout(this.resizeTimeoutId)
+        this.resizeTimeoutId = window.setTimeout(this.performResize, 120)
+    }
+
+    performResize() {
         const wasPlaying = this.state.canPlay()
         this.updateWorldSize()
         this.player.updateDimensions()
@@ -141,7 +148,7 @@ export class Game {
         this.monsters.resetBaseSize()
 
         if (this.state.levelPrepared) {
-            this.monsters.spawnLevel(this.state.currentLevelConfig)
+            this.monsters.spawnLevel(this.getRuntimeLevelConfig(this.state.currentLevelConfig))
             this.placeFinishLineRandomly()
             this.prepareFalsePortal()
         }
@@ -285,9 +292,10 @@ export class Game {
 
     prepareCurrentLevel() {
         const spawnHeartPickup = this.state.shouldSpawnHeartPickup()
+        const runtimeLevelConfig = this.getRuntimeLevelConfig(this.state.currentLevelConfig)
 
         this.applyStageTheme()
-        this.monsters.spawnLevel(this.state.currentLevelConfig, { spawnHeartPickup })
+        this.monsters.spawnLevel(runtimeLevelConfig, { spawnHeartPickup })
         if (spawnHeartPickup) {
             this.state.consumeHeartPickupWindow()
         }
@@ -559,20 +567,24 @@ export class Game {
 
     refreshGamepadInfo() {
         const gamepad = this.getConnectedGamepad()
-
-        if (!gamepad) {
-            this.gamepadInfo = {
+        const nextInfo = gamepad
+            ? {
+                connected: true,
+                label: `Joystick: ${gamepad.id}`
+            }
+            : {
                 connected: false,
                 label: 'Joystick: não detectado'
             }
-            this.settingsPanel.updateGamepadStatus(this.gamepadInfo.label)
+
+        if (
+            this.gamepadInfo.connected === nextInfo.connected &&
+            this.gamepadInfo.label === nextInfo.label
+        ) {
             return
         }
 
-        this.gamepadInfo = {
-            connected: true,
-            label: `Joystick: ${gamepad.id}`
-        }
+        this.gamepadInfo = nextInfo
         this.settingsPanel.updateGamepadStatus(this.gamepadInfo.label)
     }
 
@@ -601,7 +613,6 @@ export class Game {
     }
 
     pollGamepad() {
-        this.refreshGamepadInfo()
         const virtualSnapshot = this.virtualGamepad.getSnapshot()
 
         if (!this.shouldUseGamepad()) {
@@ -1059,6 +1070,20 @@ export class Game {
         this.calculateFinishLine()
         this.calculateFalsePortal()
         this.updateCamera()
+    }
+
+    getRuntimeLevelConfig(levelConfig) {
+        if (!this.isTouchDevice) {
+            return levelConfig
+        }
+
+        return {
+            ...levelConfig,
+            villainCount: Math.max(5, Math.round(levelConfig.villainCount * 0.65)),
+            goodMonsterCount: Math.max(0, Math.round(levelConfig.goodMonsterCount * 0.5)),
+            shooterFraction: Math.max(0.08, levelConfig.shooterFraction * 0.75),
+            respawnEnabled: levelConfig.level >= 10
+        }
     }
 
     calculateFinishLine() {

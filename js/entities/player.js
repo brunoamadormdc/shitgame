@@ -84,8 +84,8 @@ export class Player {
     }
 
     render() {
-        this.element.style.top = `${this.positionY}px`
-        this.element.style.left = `${this.positionX}px`
+        this.element.style.setProperty('--x', `${this.positionX}px`)
+        this.element.style.setProperty('--y', `${this.positionY}px`)
         this.element.style.setProperty('--aim-angle', `${this.aimAngle}rad`)
     }
 
@@ -133,8 +133,14 @@ export class Player {
 }
 
 function createPlayerTexture(document, size) {
-    const canvas = document.createElement('canvas')
     const dimension = Math.max(32, Math.round(size))
+    const cachedTexture = PLAYER_TEXTURE_CACHE.get(dimension)
+
+    if (cachedTexture) {
+        return cachedTexture
+    }
+
+    const canvas = document.createElement('canvas')
     const context = canvas.getContext('2d')
     const center = dimension / 2
 
@@ -181,5 +187,9 @@ function createPlayerTexture(document, size) {
     context.ellipse(center, center, dimension * 0.28, dimension * 0.36, 0, 0, Math.PI * 2)
     context.stroke()
 
-    return canvas.toDataURL('image/png')
+    const texture = canvas.toDataURL('image/png')
+    PLAYER_TEXTURE_CACHE.set(dimension, texture)
+    return texture
 }
+
+const PLAYER_TEXTURE_CACHE = new Map()
