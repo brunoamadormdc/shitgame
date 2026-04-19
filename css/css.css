@@ -390,6 +390,77 @@ body .__tutorialModal .__tutorialAction {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-main);
 }
+body .__virtualGamepad {
+  position: fixed;
+  inset: auto 0 12px 0;
+  z-index: 3200;
+  display: none;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 14px;
+  pointer-events: none;
+}
+body .__virtualGamepad.__visible {
+  display: flex;
+}
+body .__virtualGamepad .__virtualRight,
+body .__virtualGamepad .__virtualStick,
+body .__virtualGamepad .__virtualButton {
+  pointer-events: auto;
+}
+body .__virtualGamepad .__virtualRight {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+body .__virtualGamepad .__virtualStick {
+  position: relative;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(7, 12, 24, 0.4);
+  backdrop-filter: blur(4px);
+  touch-action: none;
+}
+body .__virtualGamepad .__virtualThumb {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  margin-left: -17px;
+  margin-top: -17px;
+  border-radius: 50%;
+  background: rgba(112, 240, 255, 0.88);
+  box-shadow: 0 0 14px rgba(112, 240, 255, 0.24);
+}
+body .__virtualGamepad .__aimStick .__virtualThumb {
+  background: rgba(255, 154, 154, 0.92);
+  box-shadow: 0 0 14px rgba(255, 154, 154, 0.24);
+}
+body .__virtualGamepad .__virtualButtons {
+  display: flex;
+  gap: 8px;
+}
+body .__virtualGamepad .__virtualButton {
+  min-width: 74px;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-main);
+  font: inherit;
+  background: rgba(7, 12, 24, 0.7);
+}
+body .__virtualGamepad .__laserButton {
+  background: linear-gradient(90deg, rgba(112, 240, 255, 0.9), rgba(122, 183, 255, 0.84));
+  color: #041220;
+}
+body .__virtualGamepad .__specialButton {
+  background: linear-gradient(90deg, rgba(255, 108, 108, 0.9), rgba(255, 200, 87, 0.88));
+  color: #180709;
+}
 body .__hud {
   position: fixed;
   top: 10px;
@@ -494,6 +565,24 @@ body .container {
             50px 80px,
             120px 40px,
             0 0;
+}
+body .container[data-theme='nebula-a'] {
+  background-image: radial-gradient(circle at 18% 24%, rgba(112, 240, 255, 0.1), transparent 13%), radial-gradient(circle at 74% 18%, rgba(255, 138, 184, 0.08), transparent 12%), radial-gradient(circle at 58% 72%, rgba(255, 200, 87, 0.06), transparent 14%), radial-gradient(circle, rgba(255, 255, 255, 0.9) 0 1px, transparent 1.5px), radial-gradient(circle, rgba(132, 179, 255, 0.55) 0 1px, transparent 1.6px), radial-gradient(circle, rgba(255, 146, 197, 0.42) 0 1px, transparent 1.8px), linear-gradient(180deg, rgba(5, 10, 24, 0.84), rgba(3, 8, 19, 0.94));
+}
+body .container[data-theme='nebula-b'] {
+  background-image: radial-gradient(circle at 22% 18%, rgba(88, 118, 255, 0.12), transparent 15%), radial-gradient(circle at 82% 22%, rgba(79, 223, 202, 0.09), transparent 16%), radial-gradient(circle at 48% 76%, rgba(255, 87, 167, 0.08), transparent 17%), radial-gradient(circle, rgba(255, 255, 255, 0.88) 0 1px, transparent 1.5px), radial-gradient(circle, rgba(132, 179, 255, 0.44) 0 1px, transparent 1.6px), radial-gradient(circle, rgba(120, 255, 219, 0.34) 0 1px, transparent 1.8px), linear-gradient(180deg, rgba(4, 7, 27, 0.9), rgba(2, 10, 22, 0.98));
+}
+body .container[data-theme='nebula-c'] {
+  background-image: radial-gradient(circle at 24% 72%, rgba(255, 153, 92, 0.08), transparent 18%), radial-gradient(circle at 74% 18%, rgba(255, 85, 153, 0.1), transparent 14%), radial-gradient(circle at 48% 24%, rgba(123, 97, 255, 0.1), transparent 17%), radial-gradient(circle, rgba(255, 255, 255, 0.88) 0 1px, transparent 1.5px), radial-gradient(circle, rgba(255, 174, 119, 0.36) 0 1px, transparent 1.6px), radial-gradient(circle, rgba(167, 124, 255, 0.34) 0 1px, transparent 1.8px), linear-gradient(180deg, rgba(12, 7, 24, 0.92), rgba(6, 8, 22, 0.98));
+}
+body .container[data-theme='nebula-d'] {
+  background-image: radial-gradient(circle at 16% 18%, rgba(82, 255, 168, 0.08), transparent 14%), radial-gradient(circle at 72% 24%, rgba(89, 182, 255, 0.1), transparent 18%), radial-gradient(circle at 56% 82%, rgba(255, 214, 87, 0.08), transparent 16%), radial-gradient(circle, rgba(255, 255, 255, 0.86) 0 1px, transparent 1.5px), radial-gradient(circle, rgba(92, 255, 177, 0.34) 0 1px, transparent 1.6px), radial-gradient(circle, rgba(131, 198, 255, 0.34) 0 1px, transparent 1.8px), linear-gradient(180deg, rgba(4, 16, 20, 0.9), rgba(2, 8, 18, 0.98));
+}
+body .container[data-theme='nebula-e'] {
+  background-image: radial-gradient(circle at 24% 16%, rgba(255, 84, 124, 0.1), transparent 16%), radial-gradient(circle at 78% 18%, rgba(255, 138, 84, 0.08), transparent 15%), radial-gradient(circle at 58% 76%, rgba(161, 86, 255, 0.1), transparent 18%), radial-gradient(circle, rgba(255, 255, 255, 0.88) 0 1px, transparent 1.5px), radial-gradient(circle, rgba(255, 131, 164, 0.36) 0 1px, transparent 1.6px), radial-gradient(circle, rgba(197, 139, 255, 0.34) 0 1px, transparent 1.8px), linear-gradient(180deg, rgba(19, 6, 16, 0.94), rgba(6, 8, 19, 0.98));
+}
+body .container[data-theme='nebula-f'] {
+  background-image: radial-gradient(circle at 14% 28%, rgba(91, 142, 255, 0.08), transparent 18%), radial-gradient(circle at 82% 14%, rgba(255, 228, 122, 0.08), transparent 16%), radial-gradient(circle at 62% 78%, rgba(85, 255, 233, 0.08), transparent 16%), radial-gradient(circle, rgba(255, 255, 255, 0.88) 0 1px, transparent 1.5px), radial-gradient(circle, rgba(132, 179, 255, 0.34) 0 1px, transparent 1.6px), radial-gradient(circle, rgba(255, 232, 128, 0.3) 0 1px, transparent 1.8px), linear-gradient(180deg, rgba(6, 9, 28, 0.94), #030710);
 }
 body .container .__safeZone {
   position: absolute;
@@ -1084,37 +1173,41 @@ body .container .__finishLine.__falsePortal::after {
     padding: 12px;
   }
   body .__hud {
-    left: 8px;
-    right: 8px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 5px;
+    top: 6px;
+    left: auto;
+    right: 6px;
+    grid-template-columns: repeat(3, minmax(48px, auto));
+    gap: 4px;
+    max-width: calc(100vw - 12px);
   }
   body .__hudCard {
-    min-height: 34px;
+    min-height: 28px;
     min-width: 0;
-    padding: 6px 7px;
+    padding: 5px 6px;
+    border-radius: 8px;
+    background: rgba(7, 12, 24, 0.42);
   }
   body .__hudCard strong {
-    font-size: 10px;
+    font-size: 9px;
   }
   body .__hudLabel {
-    font-size: 6px;
+    font-size: 5px;
   }
   body .__hudCard--compact,
   body .__hudLife,
   body .__hudHammers {
-    min-height: 34px;
+    min-height: 28px;
   }
   body .__life {
-    width: 32px;
-    height: 16px;
+    width: 26px;
+    height: 13px;
   }
   body .__hudHammers strong {
-    padding-left: 14px;
+    padding-left: 12px;
   }
   body .__hudHammers strong::before {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
   }
   body .__overlay {
     padding: 16px;
@@ -1146,5 +1239,24 @@ body .container .__finishLine.__falsePortal::after {
   body .__tutorialModal .__tutorialTab {
     width: 30px;
     height: 30px;
+  }
+  body .__virtualGamepad {
+    bottom: 8px;
+    padding: 0 8px;
+  }
+  body .__virtualGamepad .__virtualStick {
+    width: 84px;
+    height: 84px;
+  }
+  body .__virtualGamepad .__virtualThumb {
+    width: 30px;
+    height: 30px;
+    margin-left: -15px;
+    margin-top: -15px;
+  }
+  body .__virtualGamepad .__virtualButton {
+    min-width: 68px;
+    min-height: 38px;
+    font-size: 10px;
   }
 }

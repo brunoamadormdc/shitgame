@@ -9,6 +9,7 @@ import { Hud } from "../ui/hud.js"
 import { Messages } from "../ui/messages.js"
 import { SettingsPanel } from "../ui/settingsPanel.js"
 import { TutorialModal } from "../ui/tutorialModal.js"
+import { VirtualGamepad } from "../ui/virtualGamepad.js"
 
 export class Game {
     constructor(document) {
@@ -49,6 +50,7 @@ export class Game {
         this.tutorialModal = new TutorialModal(this.document, {
             onClose: () => this.handleTutorialClose()
         })
+        this.virtualGamepad = new VirtualGamepad(this.document)
         this.settingsPanel = new SettingsPanel(this.document, {
             onChange: (settings) => this.handleSettingsChange(settings),
             onStart: () => this.startGame()
@@ -107,6 +109,7 @@ export class Game {
         this.hud.mount()
         this.player.mount(this.container)
         this.settingsPanel.mount()
+        this.virtualGamepad.mount()
 
         this.updateWorldSize()
         this.calculateFinishLine()
@@ -220,6 +223,9 @@ export class Game {
         }
 
         this.state.startPlaying()
+        if (this.isTouchDevice) {
+            this.virtualGamepad.show()
+        }
         this.tutorialModal.hide()
         this.messages.hide()
         this.settingsPanel.hide()
@@ -233,6 +239,7 @@ export class Game {
         this.player.resetPosition()
         this.player.setSafe(true)
         this.deactivateFalsePortal()
+        this.virtualGamepad.hide()
         this.messages.show(this.getOverlayContent())
         this.settingsPanel.show({
             settings: this.settings,
@@ -251,6 +258,7 @@ export class Game {
         this.resetInputState()
         this.player.resetPosition()
         this.player.setSafe(true)
+        this.virtualGamepad.hide()
         this.messages.show(this.getOverlayContent())
 
         if (this.state.status === GAME_STATES.GAME_OVER) {
@@ -268,6 +276,7 @@ export class Game {
     prepareCurrentLevel() {
         const spawnHeartPickup = this.state.shouldSpawnHeartPickup()
 
+        this.applyStageTheme()
         this.monsters.spawnLevel(this.state.currentLevelConfig, { spawnHeartPickup })
         if (spawnHeartPickup) {
             this.state.consumeHeartPickupWindow()
@@ -480,10 +489,14 @@ export class Game {
             description: 'A nave ficou em espera. O mapa e os inimigos estão congelados.',
             hint: 'Pressione Enter ou Start para despausar.'
         })
+        this.virtualGamepad.hide()
     }
 
     resumeGame() {
         this.state.startPlaying()
+        if (this.isTouchDevice) {
+            this.virtualGamepad.show()
+        }
         this.messages.hide()
     }
 
@@ -554,14 +567,15 @@ export class Game {
         }
 
         if (this.settings.inputMode === 'gamepad') {
-            return this.gamepadInfo.connected
+            return this.gamepadInfo.connected || (this.isTouchDevice && this.virtualGamepad.isVisible())
         }
 
-        return this.gamepadInfo.connected
+        return this.gamepadInfo.connected || (this.isTouchDevice && this.virtualGamepad.isVisible())
     }
 
     pollGamepad() {
         this.refreshGamepadInfo()
+        const virtualSnapshot = this.virtualGamepad.getSnapshot()
 
         if (!this.shouldUseGamepad()) {
             this.previousGamepadButtons.start = false
@@ -570,13 +584,13 @@ export class Game {
             this.previousGamepadButtons.speedUp = false
             this.previousGamepadButtons.speedDown = false
             return {
-                x: 0,
-                y: 0,
-                aimX: 0,
-                aimY: 0,
+                x: virtualSnapshot.x,
+                y: virtualSnapshot.y,
+                aimX: virtualSnapshot.aimX,
+                aimY: virtualSnapshot.aimY,
                 startPressed: false,
-                attackPressed: false,
-                specialAttackPressed: false,
+                attackPressed: virtualSnapshot.attackPressed,
+                specialAttackPressed: virtualSnapshot.specialAttackPressed,
                 speedUpPressed: false,
                 speedDownPressed: false
             }
@@ -586,13 +600,13 @@ export class Game {
 
         if (!gamepad) {
             return {
-                x: 0,
-                y: 0,
-                aimX: 0,
-                aimY: 0,
+                x: virtualSnapshot.x,
+                y: virtualSnapshot.y,
+                aimX: virtualSnapshot.aimX,
+                aimY: virtualSnapshot.aimY,
                 startPressed: false,
-                attackPressed: false,
-                specialAttackPressed: false,
+                attackPressed: virtualSnapshot.attackPressed,
+                specialAttackPressed: virtualSnapshot.specialAttackPressed,
                 speedUpPressed: false,
                 speedDownPressed: false
             }
@@ -626,7 +640,17 @@ export class Game {
         this.previousGamepadButtons.speedUp = speedUpDown
         this.previousGamepadButtons.speedDown = speedDownDown
 
-        return { x, y, aimX, aimY, startPressed, attackPressed, specialAttackPressed, speedUpPressed, speedDownPressed }
+        return {
+            x: clampAxis(x + virtualSnapshot.x),
+            y: clampAxis(y + virtualSnapshot.y),
+            aimX: virtualSnapshot.aimX !== 0 ? virtualSnapshot.aimX : aimX,
+            aimY: virtualSnapshot.aimY !== 0 ? virtualSnapshot.aimY : aimY,
+            startPressed,
+            attackPressed: attackPressed || virtualSnapshot.attackPressed,
+            specialAttackPressed: specialAttackPressed || virtualSnapshot.specialAttackPressed,
+            speedUpPressed,
+            speedDownPressed
+        }
     }
 
     applyDeadzone(value, deadzone) {
@@ -968,6 +992,13 @@ export class Game {
         const rankText = rank ? ` Rank local #${rank}.` : ''
 
         return `Cheguei no nível ${level} com ${score} pontos no ShitGame e morri no caos espacial.${rankText} Consegue bater isso?`
+    }
+
+    applyStageTheme() {
+        const themes = ['nebula-a', 'nebula-b', 'nebula-c', 'nebula-d', 'nebula-e', 'nebula-f']
+        const theme = themes[(Math.random() * themes.length) | 0]
+
+        this.container.dataset.theme = theme
     }
 
     startDramaticBeat(durationMs) {
@@ -1574,6 +1605,10 @@ function randomInteger(min, max) {
 
 function randomFloat(min, max) {
     return Math.random() * (max - min) + min
+}
+
+function clampAxis(value) {
+    return Math.max(-1, Math.min(1, value))
 }
 
 function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
