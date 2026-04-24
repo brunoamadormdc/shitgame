@@ -20,6 +20,15 @@ export class Game {
         this.leaderboard = loadLeaderboard()
         this.tutorialHasBeenSeen = hasSeenTutorial()
         this.isTouchDevice = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0
+
+        if (this.isTouchDevice) {
+            this.config.player.sizeRatio = 0.03
+            this.config.player.minSize = 34
+            this.config.player.maxSize = 52
+            this.config.safeZone.size = 56
+            this.config.safeZone.threshold = 18
+        }
+
         this.body = this.document.querySelector('body')
         this.viewport = this.document.createElement('div')
         this.viewport.classList.add('__worldViewport')
@@ -755,11 +764,11 @@ export class Game {
             return false
         }
 
-        const origin = this.getPlayerCenter()
         const direction = {
             x: Math.cos(this.player.aimAngle),
             y: Math.sin(this.player.aimAngle)
         }
+        const origin = this.getPlayerShotOrigin(direction)
         const maxDistance = Math.hypot(this.worldSize.width, this.worldSize.height)
         const monsterHit = this.monsters.getFirstVillainOnRay(origin, direction, maxDistance)
         const finishLineHit = this.getFinishLineRayHit(origin, direction, maxDistance)
@@ -833,6 +842,19 @@ export class Game {
         return {
             x: position.x + position.width / 2,
             y: position.y + position.height / 2
+        }
+    }
+
+    getPlayerShotOrigin(direction) {
+        const position = this.player.getPosition()
+        const centerX = position.x + position.width / 2
+        const centerY = position.y + position.height / 2
+        const muzzleOffsetMultiplier = this.isTouchDevice ? 0.1 : 0.02
+        const muzzleOffset = Math.max(position.width, position.height) * muzzleOffsetMultiplier
+
+        return {
+            x: centerX + direction.x * muzzleOffset,
+            y: centerY + direction.y * muzzleOffset
         }
     }
 
@@ -1066,6 +1088,8 @@ export class Game {
         }
         this.container.style.width = `${this.worldSize.width}px`
         this.container.style.height = `${this.worldSize.height}px`
+        this.safeZone.style.width = `${this.config.safeZone.size}px`
+        this.safeZone.style.height = `${this.config.safeZone.size}px`
         this.monsters.setWorldSize(this.worldSize)
         this.calculateFinishLine()
         this.calculateFalsePortal()
